@@ -69,7 +69,6 @@ public class Settings {
     final HashMap<String, Object> list = new HashMap<String, Object>();
 
     list.put("SettingsVersion", 1);
-    list.put("Enable", true);
     list.put("Language", "en-US");
     list.put("FreezePlayer", true);
     list.put("BlockChat", true);
