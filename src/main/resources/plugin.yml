@@ -1,0 +1,13 @@
+name: ExtraAuth
+version: 1.0
+description: Use Google Authenticator to authenticate to your server.
+author: WildN00b
+authors: [WildN00b]
+main: me.wildn00b.extraauth.ExtraAuth
+database: false
+
+commands:
+  auth:
+    desciption: ExtraAuth
+    aliases: [ExtraAuth]
+    usage: Syntax error! Simply type /<command> to see the help menu.
