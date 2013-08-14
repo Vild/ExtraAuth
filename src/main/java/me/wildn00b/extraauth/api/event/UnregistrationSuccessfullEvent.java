@@ -22,10 +22,27 @@ package me.wildn00b.extraauth.api.event;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
+/**
+ * UnregistrationSuccessfullEvent is an event that is called when an authentication was failed.
+ * 
+ * @author Dan "WildN00b" Printzell
+ * @version 1.0.0
+ * @since 1.0.0
+ */
 public class UnregistrationSuccessfullEvent extends Event {
   private static final HandlerList handlers = new HandlerList();
   private final String playerInformation;
 
+  /**
+   * Creates a UnregistrationSuccessfullEvent instance.
+   * 
+   * @since 1.0.0
+   * @param playerInformation
+   *          The player
+   * @param failedReason
+   *          The failed reason
+   * 
+   */
   public UnregistrationSuccessfullEvent(String playerInformation) {
     super(false);
     this.playerInformation = playerInformation;
@@ -36,12 +53,11 @@ public class UnregistrationSuccessfullEvent extends Event {
     return handlers;
   }
 
+  /**
+   * @return Returns the player information.
+   */
   public String getPlayer() {
     return playerInformation;
-  }
-
-  public static HandlerList getHandlerList() {
-    return handlers;
   }
 
 }

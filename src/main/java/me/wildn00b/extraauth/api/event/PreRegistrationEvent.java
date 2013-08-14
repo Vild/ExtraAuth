@@ -24,11 +24,26 @@ import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
+/**
+ * PreRegistrationEvent is an event that is called when an authentication was failed.
+ * 
+ * @author Dan "WildN00b" Printzell
+ * @version 1.0.0
+ * @since 1.0.0
+ */
 public class PreRegistrationEvent extends Event implements Cancellable {
   private static final HandlerList handlers = new HandlerList();
   private Boolean cancelled;
   private final Player player;
 
+  /**
+   * Creates a PreRegistrationEvent instance.
+   * 
+   * @since 1.0.0
+   * @param playerInformation
+   *          The player
+   * 
+   */
   public PreRegistrationEvent(Player player) {
     super(false);
     this.player = player;
@@ -40,6 +55,9 @@ public class PreRegistrationEvent extends Event implements Cancellable {
     return handlers;
   }
 
+  /**
+   * @return Returns the player information.
+   */
   public Player getPlayer() {
     return player;
   }
@@ -52,10 +70,6 @@ public class PreRegistrationEvent extends Event implements Cancellable {
   @Override
   public void setCancelled(boolean cancel) {
     cancelled = cancel;
-  }
-
-  public static HandlerList getHandlerList() {
-    return handlers;
   }
 
 }

@@ -24,11 +24,28 @@ import me.wildn00b.extraauth.api.PlayerInformation;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
+/**
+ * UnregistrationFailedEvent is an event that is called when an authentication was failed.
+ * 
+ * @author Dan "WildN00b" Printzell
+ * @version 1.0.0
+ * @since 1.0.0
+ */
 public class UnregistrationFailedEvent extends Event {
   private static final HandlerList handlers = new HandlerList();
   private final FailedReason failedReason;
   private final PlayerInformation playerInformation;
 
+  /**
+   * Creates a UnregistrationFailedEvent instance.
+   * 
+   * @since 1.0.0
+   * @param playerInformation
+   *          The player
+   * @param failedReason
+   *          The failed reason
+   * 
+   */
   public UnregistrationFailedEvent(PlayerInformation playerInformation,
       FailedReason failedReason) {
     super(false);
@@ -36,6 +53,9 @@ public class UnregistrationFailedEvent extends Event {
     this.failedReason = failedReason;
   }
 
+  /**
+   * @return Why the authentication was failed.
+   */
   public FailedReason getFailedReason() {
     return failedReason;
   }
@@ -45,12 +65,11 @@ public class UnregistrationFailedEvent extends Event {
     return handlers;
   }
 
+  /**
+   * @return Return the player information.
+   */
   public PlayerInformation getPlayer() {
     return playerInformation;
-  }
-
-  public static HandlerList getHandlerList() {
-    return handlers;
   }
 
 }

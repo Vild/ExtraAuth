@@ -24,10 +24,25 @@ import me.wildn00b.extraauth.api.PlayerInformation;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
+/**
+ * RegistrationSuccessfullEvent is an event that is called when an authentication was failed.
+ * 
+ * @author Dan "WildN00b" Printzell
+ * @version 1.0.0
+ * @since 1.0.0
+ */
 public class RegistrationSuccessfullEvent extends Event {
   private static final HandlerList handlers = new HandlerList();
   private final PlayerInformation playerInformation;
 
+  /**
+   * Creates a RegistrationSuccessfullEvent instance.
+   * 
+   * @since 1.0.0
+   * @param playerInformation
+   *          The player
+   * 
+   */
   public RegistrationSuccessfullEvent(PlayerInformation playerInformation) {
     super(false);
     this.playerInformation = playerInformation;
@@ -38,12 +53,11 @@ public class RegistrationSuccessfullEvent extends Event {
     return handlers;
   }
 
+  /**
+   * @return Returns the player information.
+   */
   public PlayerInformation getPlayer() {
     return playerInformation;
-  }
-
-  public static HandlerList getHandlerList() {
-    return handlers;
   }
 
 }

@@ -24,11 +24,28 @@ import me.wildn00b.extraauth.api.PlayerInformation;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
+/**
+ * AuthenticateFailedEvent is an event that is called when an authentication was failed.
+ * 
+ * @author Dan "WildN00b" Printzell
+ * @version 1.0.0
+ * @since 1.0.0
+ */
 public class AuthenticateFailedEvent extends Event {
   private static final HandlerList handlers = new HandlerList();
   private final FailedReason failedReason;
   private final PlayerInformation playerInformation;
 
+  /**
+   * Creates a AuthenticateFailedEvent instance.
+   * 
+   * @since 1.0.0
+   * @param playerInformation
+   *          The player
+   * @param failedReason
+   *          The failed reason
+   * 
+   */
   public AuthenticateFailedEvent(PlayerInformation playerInformation,
       FailedReason failedReason) {
     super(false);
@@ -36,6 +53,9 @@ public class AuthenticateFailedEvent extends Event {
     this.failedReason = failedReason;
   }
 
+  /**
+   * @return Why the authentication was failed.
+   */
   public FailedReason getFailedReason() {
     return failedReason;
   }
@@ -45,12 +65,11 @@ public class AuthenticateFailedEvent extends Event {
     return handlers;
   }
 
+  /**
+   * @return Returns the player information.
+   */
   public PlayerInformation getPlayerInformation() {
     return playerInformation;
-  }
-
-  public static HandlerList getHandlerList() {
-    return handlers;
   }
 
 }

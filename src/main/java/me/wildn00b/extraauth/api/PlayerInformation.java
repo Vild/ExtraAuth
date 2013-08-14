@@ -25,41 +25,96 @@ import me.wildn00b.extraauth.io.PlayerStatusDB;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
+/**
+ * The PlayerInformation class is used to get information about a player, for example if the player is authenticated.
+ * 
+ * @author Dan "WildN00b" Printzell
+ * @version 1.0
+ * @since 1.0.0
+ */
 public class PlayerInformation {
   PlayerStatusDB.playerstatus info = null;
 
+  /**
+   * Creates a PlayerInformation instance.
+   * 
+   * @since 1.0.0
+   * @param player
+   *          The player with you want the information about.
+   * 
+   */
   public PlayerInformation(String player) {
     info = ExtraAuth.INSTANCE.DB.Get(player);
   }
 
+  /**
+   * @since 1.0.0
+   * @return Returns if the player is authenticated.
+   */
   public boolean getAuthed() {
     return info.Authed;
   }
 
+  /**
+   * @since 1.0.0
+   * @return Returns if the player exist in the database.
+   */
   public boolean getExist() {
     return info != null;
   }
 
+  /**
+   * @since 1.0.0
+   * @return Returns the IP of which the player was last connected or currently connected from.
+   */
   public String getLastIP() {
     return info.LastIP;
   }
 
+  /**
+   * @since 1.0.0
+   * @return Returns when the player was last connected in milliseconds from January 1, 1970 UTC.
+   * @see System.currentTimeMillis
+   */
   public long getLastOnline() {
     return info.LastOnline;
   }
 
+  /**
+   * @since 1.0.0
+   * @return Returns the players name.
+   */
   public String getPlayer() {
     return info.Player;
   }
 
+  /**
+   * @since 1.0.0
+   * @return Returns the bukkit player object if the player is connected.
+   */
   public Player getPlayerObj() {
     return Bukkit.getPlayer(info.Player);
   }
 
+  /**
+   * Sets if the player is authenticated.
+   * 
+   * @since 1.0.0
+   * @param authed
+   *          The value.
+   */
   public void setAuthed(boolean authed) {
     info.Authed = authed;
   }
 
+  /**
+   * Sets when the player was last connect.
+   * 
+   * @since 1.0.0
+   * @param lastOnline
+   *          The time.
+   * @see System.currentTimeMillis
+   */
   public void setLastOnline(long lastOnline) {
     info.LastOnline = lastOnline;
   }

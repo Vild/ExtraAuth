@@ -25,11 +25,28 @@ import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
+/**
+ * PreUnregistrationEvent is an event that is called when an authentication was failed.
+ * 
+ * @author Dan "WildN00b" Printzell
+ * @version 1.0.0
+ * @since 1.0.0
+ */
 public class PreUnregistrationEvent extends Event implements Cancellable {
   private static final HandlerList handlers = new HandlerList();
   private Boolean cancelled;
   private final PlayerInformation playerInformation;
 
+  /**
+   * Creates a PreUnregistrationEvent instance.
+   * 
+   * @since 1.0.0
+   * @param playerInformation
+   *          The player
+   * @param failedReason
+   *          The failed reason
+   * 
+   */
   public PreUnregistrationEvent(PlayerInformation playerInformation) {
     super(false);
     this.playerInformation = playerInformation;
@@ -41,6 +58,9 @@ public class PreUnregistrationEvent extends Event implements Cancellable {
     return handlers;
   }
 
+  /**
+   * @return Returns the player information.
+   */
   public PlayerInformation getPlayer() {
     return playerInformation;
   }
@@ -53,10 +73,6 @@ public class PreUnregistrationEvent extends Event implements Cancellable {
   @Override
   public void setCancelled(boolean cancel) {
     cancelled = cancel;
-  }
-
-  public static HandlerList getHandlerList() {
-    return handlers;
   }
 
 }
