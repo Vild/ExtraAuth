@@ -181,19 +181,20 @@ public class PlayerListener implements Listener {
   @EventHandler(priority = EventPriority.HIGHEST)
   public void onFoodLevelChange(FoodLevelChangeEvent event) {
     if (event.getEntity() != null && event.getEntity() instanceof Player
-        && !event.isCancelled()) {
-      final Player player = (Player) event.getEntity();
-      if (isFrozen(player))
-        event.setCancelled(true);
-    }
+        && !event.isCancelled() && isFrozen((Player) event.getEntity()))
+      event.setCancelled(true);
   }
 
   @EventHandler(priority = EventPriority.HIGHEST)
   public void onPlayerChat(AsyncPlayerChatEvent event) {
     if (!event.isCancelled() && event.getPlayer() != null
         && !event.getMessage().startsWith("/")
-        && (Boolean) extraauth.Settings._("BlockChat")) {
-      isFrozen(event.getPlayer()); // Prints the message
+        && (Boolean) extraauth.Settings._("BlockChat")
+        && extraauth.DB.Contains(event.getPlayer().getName())) {
+      if (isFrozen(event.getPlayer()))
+        event.getPlayer().sendMessage(
+            ChatColor.YELLOW + "[ExtraAuth] " + ChatColor.GOLD
+                + extraauth.Lang._("FreezeMessage"));
       event.setCancelled(true);
     }
   }
