@@ -74,7 +74,7 @@ public class Settings {
     list.put("BlockChat", true);
     list.put("Servername", ExtraAuth.INSTANCE.getServer().getServerName());
     list.put("ReauthenticateTimeout", 5);
-    
+
     list.put("AuthMethod.TOTP", true);
     list.put("AuthMethod.Password", true);
     for (final Entry<String, Object> entry : list.entrySet())

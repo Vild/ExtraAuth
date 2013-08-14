@@ -79,7 +79,9 @@ public class Language {
     list.put("NeedToAuthenticate",
         "You need to authenticate to use that command");
 
-    list.put("Command.Help", "- Shows this help.");
+    list.put("Command.OnlyIngame",
+        "The commands can only be run ingame by the player.");
+    list.put("Command.Help", "(page number) - Shows this help.");
     list.put(
         "Command.Enable.TOTP.Help",
         "- Enabling a TOTP authentication on your account. (Uses the Google Authenticator app)");
@@ -89,7 +91,8 @@ public class Language {
     list.put("Command.Disable.Help", "- Disabling ExtraAuth on your account.");
     list.put("Command.Auth.Help",
         "<KEY> - Authenticates with the key to your account.");
-    list.put("Command.Title", "ExtraAuth V%VERSION% Page %PAGE%/%MAXPAGE%");
+    list.put("Command.Title",
+        "ExtraAuth V%VERSION% Page %PAGE%/%MAXPAGE% by %AUTHOR%");
 
     list.put("Command.Enable.Processing", "Creating a privatekey...");
     list.put("Command.Enable.UrlFailed",
@@ -112,9 +115,10 @@ public class Language {
         "Disabled successfully ExtraAuth on your account.");
     list.put("Command.Disable.Event.Failed",
         "Another plugin was blocking your access to disable ExtraAuth.");
-    list.put(
-        "Command.Disable.Failed",
-        "Failed to disable ExtraAuth on your account. Have you already got it disabled?");
+    list.put("Command.Disable.NotRegistered.Failed",
+        "You need to have it enabled before disabling.");
+    list.put("Command.Disable.Unknown.Failed",
+        "Unknown error, please contact your server administrator.");
 
     list.put("Command.Auth.Success", "Successfully authenticated.");
     list.put("Command.Auth.NotRegistered.Failed",

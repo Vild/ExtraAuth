@@ -168,8 +168,16 @@ public class AuthCommand implements CommandExecutor {
                     new UnregistrationFailedEvent(new PlayerInformation(player
                         .getName()), FailedReason.CANCELED));
             send(sender, extraauth.Lang._("Command.Disable.Event.Failed"));
-          } else if (extraauth.DB.Get(player.getName()) != null
-              && !extraauth.DB.Get(player.getName()).Authed) {
+          } else if (extraauth.DB.Contains(player.getName())) {
+            extraauth
+                .getServer()
+                .getPluginManager()
+                .callEvent(
+                    new UnregistrationFailedEvent(new PlayerInformation(player
+                        .getName()), FailedReason.NOT_REGISTERED));
+            send(sender,
+                extraauth.Lang._("Command.Disable.NotRegistered.Failed"));
+          } else if (!extraauth.DB.Get(player.getName()).Authed) {
             extraauth
                 .getServer()
                 .getPluginManager()
@@ -190,8 +198,8 @@ public class AuthCommand implements CommandExecutor {
                 .getPluginManager()
                 .callEvent(
                     new UnregistrationFailedEvent(new PlayerInformation(player
-                        .getName()), FailedReason.NOT_REGISTERED));
-            send(sender, extraauth.Lang._("Command.Disable.Failed"));
+                        .getName()), FailedReason.UNKNOWN));
+            send(sender, extraauth.Lang._("Command.Disable.Unknown.Failed"));
           }
 
         } else if (args[0].equalsIgnoreCase("help")) {
@@ -407,7 +415,7 @@ public class AuthCommand implements CommandExecutor {
             .replaceAll("%VERSION%", extraauth.Version)
             .replaceAll("%PAGE%", "" + ChatColor.RED + page + ChatColor.AQUA)
             .replaceAll("%MAXPAGE%", "" + ChatColor.BLUE + maxpage)
-        + ChatColor.RESET);
+            .replaceAll("%AUTHOR%", ChatColor.YELLOW + "WildN00b"));
     try {
       for (int i = (page - 1) * 6; i < ((page - 1) * 6) + 6; i++)
         sender.sendMessage(cmds.get(i));
