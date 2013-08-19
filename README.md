@@ -11,3 +11,4 @@ License
 -------
 ExtraAuth - GNU General Public License, Version 2
 Base32.java - Apache License, Version 2.0
+net.drgnome.nbtlib - Creative Commons BY 3.0
