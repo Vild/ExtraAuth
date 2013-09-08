@@ -19,7 +19,7 @@
 
 package me.wildn00b.extraauth.api.event;
 
-import me.wildn00b.extraauth.auth.AuthMethod;
+import me.wildn00b.extraauth.api.AuthMethod;
 
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -28,7 +28,6 @@ import org.bukkit.event.HandlerList;
  * RegistrationFailedEvent is an event that is called when an authentication was failed.
  * 
  * @author Dan "WildN00b" Printzell
- * @version 1.0.0
  * @since 1.0.0
  */
 public class RegistrationFailedEvent extends Event {

@@ -25,14 +25,19 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Level;
 
 import me.wildn00b.extraauth.ExtraAuth;
+import me.wildn00b.extraauth.api.AuthManager;
+import me.wildn00b.extraauth.api.AuthMethod;
+import me.wildn00b.extraauth.api.PlayerInformation;
 import me.wildn00b.extraauth.api.event.FailedReason;
-import me.wildn00b.extraauth.auth.AuthMethod;
-import me.wildn00b.extraauth.auth.totp.TOTP;
+import net.drgnome.nbtlib.NBT;
+import net.drgnome.nbtlib.Tag;
 
 import org.bukkit.entity.Player;
 
@@ -46,30 +51,36 @@ public class PlayerStatusDB {
     public String Player;
     public String PrivateKey;
 
-    public playerstatus(ObjectInputStream in) {
-      try {
-        readObject(in);
-      } catch (final Exception e) {
-      }
+    public playerstatus() {
+
     }
 
     public playerstatus(String player, boolean authed, long lastOnline,
-        String lastIP, String privateKey, AuthMethod method) {
+        String lastIP, AuthMethod method) {
       this.Player = player;
       this.Authed = authed;
       this.LastOnline = lastOnline;
       this.LastIP = lastIP;
-      this.PrivateKey = privateKey;
+      this.PrivateKey = "";
       this.Method = method;
     }
 
-    public void readObject(ObjectInputStream in) throws IOException {
-      Player = in.readUTF();
-      Authed = in.readBoolean();
-      LastOnline = in.readLong();
-      LastIP = in.readUTF();
-      PrivateKey = in.readUTF();
-      Method = AuthMethod.GetAuthMethod(in.readInt());
+    public playerstatus(String player, Map<String, Tag> in) {
+      try {
+        Player = player;
+        readObject(in);
+      } catch (final Exception e) {
+        e.printStackTrace();
+      }
+    }
+
+    public void readObject(Map<String, Tag> in) throws Exception {
+      final Map<String, Tag> player = (Map<String, Tag>) in.get(Player).get();
+
+      LastOnline = (Long) player.get("LastOnline").get();
+      LastIP = (String) player.get("LastIP").get();
+      PrivateKey = (String) player.get("PrivateKey").get();
+      Method = AuthManager.GetAuthMethod((String) player.get("Method").get());
     }
 
     @Override
@@ -79,50 +90,61 @@ public class PlayerStatusDB {
           + ", PrivateKey=" + PrivateKey + ", Method=" + Method + "]";
     }
 
-    private void writeObject(ObjectOutputStream out) throws IOException {
-      out.writeUTF(Player);
-      out.writeBoolean(Authed);
-      out.writeLong(LastOnline);
-      out.writeUTF(LastIP);
-      out.writeUTF(PrivateKey);
-      out.writeInt(Method.GetID());
-    }
+    private void writeObject(Map<String, Tag> out) throws Exception {
+      final Map<String, Tag> map = new HashMap<String, Tag>();
 
+      if (Method == null)
+        return;
+
+      map.put("LastOnline", Tag.newLong(LastOnline));
+      map.put("LastIP", Tag.newString(LastIP));
+      map.put("PrivateKey", Tag.newString(PrivateKey));
+      map.put("Method", Tag.newString(Method.GetName()));
+
+      out.put(Player, Tag.newCompound(map));
+    }
   }
 
-  public static final int CURRENT_VERSION = 1;
+  public static final int CURRENT_VERSION = 2;
   private ArrayList<playerstatus> db = new ArrayList<playerstatus>();
   private final ExtraAuth extraauth;
   private final File file;
 
-  private final File filebackup;
+  public PlayerStatusDB(ExtraAuth extraAuth) {
+    this.extraauth = extraAuth;
 
-  public PlayerStatusDB(ExtraAuth totpAuth) {
-    this.extraauth = totpAuth;
-    file = new File(totpAuth.getDataFolder().getAbsolutePath() + File.separator
-        + "PlayerStatusDB.db");
-    filebackup = new File(totpAuth.getDataFolder().getAbsolutePath()
-        + File.separator + "PlayerStatusDB.db.bak");
+    if (new File(extraAuth.getDataFolder().getAbsolutePath() + File.separator
+        + "PlayerStatusDB.db").exists())
+      ConvertOld();
+
+    file = new File(extraAuth.getDataFolder().getAbsolutePath()
+        + File.separator + "PlayerStatusDB.nbt");
+
     Load();
   }
 
-  public FailedReason Add(Player player, AuthMethod method, String key) {
-    if (Contains(player.getName()))
-      return FailedReason.ALREADY_REGISTERED;
-    if (method != AuthMethod.TOTP && method != AuthMethod.KEY)
+  public FailedReason Add(String player, AuthMethod method, Object... args) {
+    if (method == null)
       return FailedReason.INVALID_METHOD;
 
-    if (!db
-        .add(new playerstatus(player.getName(), true, System
-            .currentTimeMillis(), player.getAddress().getHostString(), key,
-            method)))
-      return FailedReason.UNKNOWN;
-    Save();
+    if (Contains(player))
+      return FailedReason.ALREADY_REGISTERED;
 
-    return FailedReason.SUCCESSFULL;
+    if (db.add(new playerstatus(player, true, System.currentTimeMillis(), "",
+        method))) {
+      final FailedReason fr = method.OnEnable(new PlayerInformation(player),
+          args);
+      if (fr != FailedReason.SUCCESSFULL) {
+        Remove(player);
+        return fr;
+      }
+      Save();
+      return FailedReason.SUCCESSFULL;
+    } else
+      return FailedReason.UNKNOWN;
   }
 
-  public FailedReason Auth(Player player, String key) {
+  public FailedReason Auth(Player player, Object... args) {
     final playerstatus p = Get(player.getName());
     if (p == null)
       return FailedReason.NOT_REGISTERED;
@@ -130,32 +152,10 @@ public class PlayerStatusDB {
     if (p.Authed)
       return FailedReason.ALREADY_AUTHED;
 
-    try {
-      switch (p.Method) {
-      case TOTP:
-        final long time = System.currentTimeMillis() / 30000L;
-        final String PrivateKey = p.PrivateKey;
-        if (TOTP.GenerateTOTP(PrivateKey, time, 6, 1).trim()
-            .equalsIgnoreCase(key.trim())) {
-          p.Authed = true;
-          player.setFlying(false);
-          return FailedReason.SUCCESSFULL;
-        } else
-          return FailedReason.WRONG_KEY;
-      case KEY:
-        if (key.equals(p.PrivateKey)) {
-          p.Authed = true;
-          return FailedReason.SUCCESSFULL;
-        } else
-          return FailedReason.WRONG_KEY;
-      default:
-        return FailedReason.INVALID_METHOD;
-      }
+    if (p.Method == null)
+      return FailedReason.INVALID_METHOD;
 
-    } catch (final Exception e) {
-      e.printStackTrace();
-    }
-    return FailedReason.INVALID_METHOD;
+    return p.Method.Authenticate(new PlayerInformation(player.getName()), args);
   }
 
   public void Connecting(Player player, String IP) {
@@ -163,9 +163,10 @@ public class PlayerStatusDB {
       final playerstatus ps = Get(player.getName());
 
       db.remove(ps);
-      if (ps.LastIP.equalsIgnoreCase(IP)
+      if (ps.LastIP != null
+          && ps.LastIP.equalsIgnoreCase(IP)
           && System.currentTimeMillis() - ps.LastOnline < (Integer) extraauth.Settings
-              ._("ReauthenticateTimeout") * 1000 * 60) {
+              ._("ReauthenticateTimeout", 5) * 1000 * 60) {
         ps.Authed = true;
         ps.LastIP = IP;
       }
@@ -212,79 +213,110 @@ public class PlayerStatusDB {
 
   public void Load() {
     try {
-      final ObjectInputStream in = new ObjectInputStream(new FileInputStream(
-          file));
-      final int version = in.readInt();
-      if (version != CURRENT_VERSION)
-        throw new Exception("");
+      final FileInputStream in = new FileInputStream(file);
+      final Map<String, Tag> nbt = NBT.NBTToMap(NBT.loadNBT(in));
 
-      final int size = in.readInt();
-      db = new ArrayList<PlayerStatusDB.playerstatus>(size);
+      db = new ArrayList<PlayerStatusDB.playerstatus>();
 
-      for (int i = 0; i < size; i++)
-        db.add(new playerstatus(in));
+      final Map<String, Tag> players = (Map<String, Tag>) nbt.get("Players")
+          .get();
+
+      for (final String player : players.keySet())
+        try {
+          db.add(new playerstatus(player, players));
+        } catch (final Exception ee) {
+        }
 
       in.close();
     } catch (final FileNotFoundException e) {
-    } catch (final NullPointerException e) {
-      extraauth._E("ExtraAuth.CorruptDB");
-
-      try {
-        file.delete();
-      } catch (final Exception ee) {
-      }
-
-      if (!filebackup.exists()) {
-        extraauth._E("ExtraAuth.MissingBackup");
-        db = new ArrayList<playerstatus>();
-        return;
-      }
-
-      try {
-        copyFile(filebackup, file);
-        filebackup.renameTo(new File(filebackup.getPath() + ".finalbak"));
-      } catch (final Exception ee) {
-      }
-      Load();
     } catch (final Exception e) {
       e.printStackTrace();
     }
   }
 
-  public boolean Remove(Player player) {
-    if (!Contains(player.getName()) || !Get(player.getName()).Authed)
-      return false;
+  public FailedReason Remove(String player) {
+    return Remove(player, true);
+  }
 
-    final boolean ret = db.remove(Get(player.getName()));
+  public FailedReason Remove(String player, boolean needToAuth) {
+    if (!Contains(player))
+      return FailedReason.NOT_REGISTERED;
+    if (needToAuth && !Get(player).Authed)
+      return FailedReason.NEED_TO_AUTHENTICATE;
+
+    db.remove(Get(player));
 
     Save();
 
-    return ret;
+    return FailedReason.SUCCESSFULL;
   }
 
   public void Save() {
-    extraauth._("ExtraAuth.Saving");
-    try {
-      filebackup.delete();
-    } catch (final Exception e) {
-    }
-    try {
-      file.renameTo(filebackup);
-    } catch (final Exception e) {
-    }
+    extraauth.Log.log(Level.INFO, extraauth.Lang._("ExtraAuth.Saving"));
 
     try {
-      final ObjectOutputStream out = new ObjectOutputStream(
-          new FileOutputStream(file));
+      final FileOutputStream out = new FileOutputStream(file);
+      final Map<String, Tag> nbt = new HashMap<String, Tag>();
+      final Map<String, Tag> players = new HashMap<String, Tag>();
 
-      out.writeInt(CURRENT_VERSION);
-      out.writeInt(db.size());
       for (final playerstatus ps : db)
-        ps.writeObject(out);
+        try {
+          ps.writeObject(players);
+        } catch (final Exception ee) {
+        }
+
+      nbt.put("Players", Tag.newCompound(players));
+
+      NBT.saveNBT(out, NBT.tagToNBT("root", Tag.newCompound(nbt)));
       out.flush();
       out.close();
     } catch (final Exception e) {
       e.printStackTrace();
+    }
+  }
+
+  private void ConvertOld() {
+    final File file = new File(extraauth.getDataFolder().getAbsolutePath()
+        + File.separator + "PlayerStatusDB.db");
+    new File(extraauth.getDataFolder().getAbsolutePath() + File.separator
+        + "PlayerStatusDB.db.bak");
+    playerstatus ps;
+    int method;
+    extraauth.Log.log(Level.WARNING, "ExtraAuth.Converting");
+
+    try {
+      final ObjectInputStream in = new ObjectInputStream(new FileInputStream(
+          file));
+      final int version = in.readInt();
+      if (version != 1)
+        throw new Exception("Invalid version");
+
+      final int size = in.readInt();
+      new HashMap<String, Tag>(size);
+
+      for (int i = 0; i < size; i++) {
+        ps = new playerstatus();
+        ps.Player = in.readUTF();
+        ps.Authed = in.readBoolean();
+        ps.LastOnline = in.readLong();
+        ps.LastIP = in.readUTF();
+        ps.PrivateKey = in.readUTF();
+
+        method = in.readInt();
+
+        if (method == 1)
+          ps.Method = AuthManager.GetAuthMethod("Key");
+        else if (method == 2)
+          ps.Method = AuthManager.GetAuthMethod("TOTP");
+        else
+          continue;
+
+        db.add(ps);
+      }
+
+      in.close();
+    } catch (final Exception e) {
+      extraauth.Log.log(Level.SEVERE, e.getMessage(), false);
     }
   }
 

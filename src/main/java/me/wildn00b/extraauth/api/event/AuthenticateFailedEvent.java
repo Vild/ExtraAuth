@@ -28,7 +28,6 @@ import org.bukkit.event.HandlerList;
  * AuthenticateFailedEvent is an event that is called when an authentication was failed.
  * 
  * @author Dan "WildN00b" Printzell
- * @version 1.0.0
  * @since 1.0.0
  */
 public class AuthenticateFailedEvent extends Event {

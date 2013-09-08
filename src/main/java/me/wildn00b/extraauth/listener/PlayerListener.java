@@ -17,10 +17,12 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-package me.wildn00b.extraauth;
+package me.wildn00b.extraauth.listener;
 
 import java.util.HashMap;
 import java.util.UUID;
+
+import me.wildn00b.extraauth.ExtraAuth;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -61,7 +63,7 @@ public class PlayerListener implements Listener {
   public boolean isFrozen(Player player) {
     if (extraauth.DB.IsAuth(player))
       return false;
-    if (!(Boolean) extraauth.Settings._("FreezePlayer"))
+    if (!(Boolean) extraauth.Settings._("FreezePlayer", true))
       return false;
 
     if (messageTimeout.containsKey(player.getUniqueId())) {
@@ -187,16 +189,17 @@ public class PlayerListener implements Listener {
 
   @EventHandler(priority = EventPriority.HIGHEST)
   public void onPlayerChat(AsyncPlayerChatEvent event) {
-    if (!event.isCancelled() && event.getPlayer() != null
-        && !event.getMessage().startsWith("/")
-        && (Boolean) extraauth.Settings._("BlockChat")
-        && extraauth.DB.Contains(event.getPlayer().getName())) {
-      if (isFrozen(event.getPlayer()))
-        event.getPlayer().sendMessage(
-            ChatColor.YELLOW + "[ExtraAuth] " + ChatColor.GOLD
-                + extraauth.Lang._("FreezeMessage"));
-      event.setCancelled(true);
-    }
+    if (!event.isCancelled() && event.getPlayer() != null)
+      if (extraauth.DB.Contains(event.getPlayer().getName()))
+        if (!event.getMessage().startsWith("/auth")
+            && !event.getMessage().startsWith("/extraauth"))
+          if ((Boolean) extraauth.Settings._("BlockChat", true)) {
+            if (isFrozen(event.getPlayer()))
+              event.getPlayer().sendMessage(
+                  ChatColor.YELLOW + "[ExtraAuth] " + ChatColor.GOLD
+                      + extraauth.Lang._("FreezeMessage"));
+            event.setCancelled(true);
+          }
   }
 
   @EventHandler(priority = EventPriority.HIGHEST)

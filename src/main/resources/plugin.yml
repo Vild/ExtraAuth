@@ -5,9 +5,47 @@ author: WildN00b
 authors: [WildN00b]
 main: me.wildn00b.extraauth.ExtraAuth
 database: false
+depend: [Vault]
 
 commands:
   auth:
     desciption: ExtraAuth
     aliases: [ExtraAuth]
     usage: Syntax error! Simply type /<command> to see the help menu.
+
+permissions:
+  auth.all:
+    description: All ExtraAuth permissions
+    default: op
+    children:
+      auth.reload: true
+      auth.enable.key: true
+      auth.enable.totp: true
+      auth.enableother.key: true
+      auth.disable: true
+      auth.disableother: true
+
+  auth.reload:
+    description: Allows the player to reload the config
+    default: false
+  auth.enable.onetimekey:
+    description: Allows the player to enabble Key authentication on another players account.
+    default: false
+  auth.enable.key:
+    description: Allows the player to use Key authentication on their account.
+    default: false
+  auth.enable.totp:
+    description: Allows the player to use TOTP authentication on their account.
+    default: false
+  auth.enableother.onetimekey:
+    description: Allows the player to enabble Key authentication on another players account.
+    default: false
+  auth.enableother.key:
+    description: Allows the player to enabble Key authentication on another players account.
+    default: false
+  auth.disable:
+    description: Allows the player to disable authentication on their account.
+    default: false
+  auth.disableother:
+    description: Allows the player to disable authentication on their account.
+    default: false

@@ -30,7 +30,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 public class Settings {
 
-  private YamlConfiguration file;
+  private final YamlConfiguration file;
   private File path;
 
   public Settings(ExtraAuth extraauth) {
@@ -49,12 +49,10 @@ public class Settings {
     }
   }
 
-  public Object _(String path) {
+  public Object _(String path, Object value) {
+    if (!file.contains(path))
+      file.set(path, value);
     return file.get(path);
-  }
-
-  public void Close() {
-    file = null;
   }
 
   public void Set(String path, Object value) {
@@ -75,8 +73,6 @@ public class Settings {
     list.put("Servername", ExtraAuth.INSTANCE.getServer().getServerName());
     list.put("ReauthenticateTimeout", 5);
 
-    list.put("AuthMethod.TOTP", true);
-    list.put("AuthMethod.Password", true);
     for (final Entry<String, Object> entry : list.entrySet())
       if (!file.contains(entry.getKey()))
         file.set(entry.getKey(), entry.getValue());

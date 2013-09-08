@@ -23,9 +23,8 @@ package me.wildn00b.extraauth.api.event;
  * FailedReason is an enum that contains why an failed event was called.
  * 
  * @author Dan "WildN00b" Printzell
- * @version 1.0.0
  * @since 1.0.0
  */
 public enum FailedReason {
-  ALREADY_AUTHED, ALREADY_REGISTERED, CANCELED, CONFIG_BLOCK, INVALID_METHOD, NEED_TO_AUTHENTICATE, NOT_REGISTERED, SUCCESSFULL, UNKNOWN, URL_FAILED, WRONG_KEY
+  ALREADY_AUTHED, ALREADY_REGISTERED, CANCELED, CONFIG_BLOCK, INVALID_ARGS, INVALID_METHOD, NEED_TO_AUTHENTICATE, NOT_REGISTERED, SUCCESSFULL, UNKNOWN, URL_FAILED, WRONG_KEY
 }

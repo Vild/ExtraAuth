@@ -29,7 +29,6 @@ import org.bukkit.entity.Player;
  * The PlayerInformation class is used to get information about a player, for example if the player is authenticated.
  * 
  * @author Dan "WildN00b" Printzell
- * @version 1.0
  * @since 1.0.0
  */
 public class PlayerInformation {
@@ -97,6 +96,14 @@ public class PlayerInformation {
   }
 
   /**
+   * @since 1.2.0
+   * @return Returns the private key.
+   */
+  public String getPrivateKey() {
+    return info.PrivateKey;
+  }
+
+  /**
    * Sets if the player is authenticated.
    * 
    * @since 1.0.0
@@ -119,4 +126,14 @@ public class PlayerInformation {
     info.LastOnline = lastOnline;
   }
 
+  /**
+   * Sets the private key for the player.
+   * 
+   * @since 1.2.0
+   * @param privateKey
+   *          The key
+   */
+  public void setPrivateKey(String privateKey) {
+    info.PrivateKey = privateKey;
+  }
 }

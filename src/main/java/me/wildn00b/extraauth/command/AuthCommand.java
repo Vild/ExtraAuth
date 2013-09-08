@@ -19,14 +19,12 @@
 
 package me.wildn00b.extraauth.command;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import me.wildn00b.extraauth.ExtraAuth;
+import me.wildn00b.extraauth.api.AuthManager;
+import me.wildn00b.extraauth.api.AuthMethod;
 import me.wildn00b.extraauth.api.PlayerInformation;
 import me.wildn00b.extraauth.api.event.AuthenticateFailedEvent;
 import me.wildn00b.extraauth.api.event.AuthenticateSuccessfullEvent;
@@ -38,8 +36,6 @@ import me.wildn00b.extraauth.api.event.RegistrationFailedEvent;
 import me.wildn00b.extraauth.api.event.RegistrationSuccessfullEvent;
 import me.wildn00b.extraauth.api.event.UnregistrationFailedEvent;
 import me.wildn00b.extraauth.api.event.UnregistrationSuccessfullEvent;
-import me.wildn00b.extraauth.auth.AuthMethod;
-import me.wildn00b.extraauth.auth.totp.TOTP;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -48,93 +44,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 public class AuthCommand implements CommandExecutor {
-
-  class ProcesssingTOTP implements Runnable {
-    class Done implements Runnable {
-      private final FailedReason failedReason;
-      private final String message;
-      private final Player player;
-
-      public Done(String message, Player player, FailedReason failedReason) {
-        this.message = message;
-        this.player = player;
-        this.failedReason = failedReason;
-      }
-
-      @Override
-      public void run() {
-        switch (failedReason) {
-        case SUCCESSFULL:
-          extraauth
-              .getServer()
-              .getPluginManager()
-              .callEvent(
-                  new RegistrationSuccessfullEvent(new PlayerInformation(player
-                      .getName())));
-          break;
-        default:
-          extraauth
-              .getServer()
-              .getPluginManager()
-              .callEvent(
-                  new RegistrationFailedEvent(player.getName(), failedReason,
-                      AuthMethod.TOTP));
-          break;
-        }
-        send(player, message);
-      }
-    }
-
-    private final Player player;
-
-    public ProcesssingTOTP(Player player) {
-      this.player = player;
-    }
-
-    @Override
-    public void run() {
-      final String privatekey = TOTP.GeneratePrivateKey();
-      FailedReason failedReason = extraauth.DB.Add(player, AuthMethod.TOTP,
-          privatekey);
-      final String url = "http://chart.googleapis.com/chart?chs=400x400&cht=qr&chl=200x200&chld=M|0&cht=qr&chl=otpauth://totp/ExtraAuth@"
-          + (String) extraauth.Settings._("Servername")
-          + "?secret="
-          + privatekey;
-      String message = null;
-      String tinyurl = null;
-      try {
-        tinyurl = shorter(url);
-      } catch (final IOException e) {
-      }
-
-      if (tinyurl != null) {
-        if (failedReason == FailedReason.SUCCESSFULL)
-          message = extraauth.Lang
-              ._("Command.Enable.TOTP.Success")
-              .replaceAll("%SERVERNAME%",
-                  (String) extraauth.Settings._("Servername"))
-              .replaceAll("%URL%", tinyurl);
-        else if (failedReason == FailedReason.ALREADY_REGISTERED)
-          message = extraauth.Lang._("Command.Enable.AlreadyRegistered.Failed");
-        else if (failedReason == FailedReason.INVALID_METHOD)
-          message = extraauth.Lang._("Command.Enable.InvalidMethod.Failed");
-        else
-          message = extraauth.Lang._("Command.Enable.Unknown.Failed");
-
-      } else {
-        message = extraauth.Lang._("Command.Enable.UrlFailed");
-        extraauth.DB.Remove(player);
-        failedReason = FailedReason.URL_FAILED;
-      }
-      extraauth
-          .getServer()
-          .getScheduler()
-          .runTask(extraauth,
-              new ProcesssingTOTP.Done(message, player, failedReason));
-    }
-  }
-
-  private static final String tinyUrl = "http://tinyurl.com/api-create.php?url=";
 
   private final ExtraAuth extraauth;
 
@@ -145,205 +54,28 @@ public class AuthCommand implements CommandExecutor {
   @Override
   public boolean onCommand(CommandSender sender, Command command, String label,
       String[] args) {
-
-    if (!(sender instanceof Player)) {
-      send(sender, extraauth.Lang._("Command.OnlyIngame"));
-      return true;
-    }
-
-    final Player player = (Player) sender;
-
     try {
       if (args.length > 0) {
-        if (args[0].equalsIgnoreCase("disable")) {
-          final PreUnregistrationEvent event = new PreUnregistrationEvent(
-              new PlayerInformation(player.getName()));
-          extraauth.getServer().getPluginManager().callEvent(event);
-
-          if (event.isCancelled()) {
-            extraauth
-                .getServer()
-                .getPluginManager()
-                .callEvent(
-                    new UnregistrationFailedEvent(new PlayerInformation(player
-                        .getName()), FailedReason.CANCELED));
-            send(sender, extraauth.Lang._("Command.Disable.Event.Failed"));
-          } else if (extraauth.DB.Contains(player.getName())) {
-            extraauth
-                .getServer()
-                .getPluginManager()
-                .callEvent(
-                    new UnregistrationFailedEvent(new PlayerInformation(player
-                        .getName()), FailedReason.NOT_REGISTERED));
-            send(sender,
-                extraauth.Lang._("Command.Disable.NotRegistered.Failed"));
-          } else if (!extraauth.DB.Get(player.getName()).Authed) {
-            extraauth
-                .getServer()
-                .getPluginManager()
-                .callEvent(
-                    new UnregistrationFailedEvent(new PlayerInformation(player
-                        .getName()), FailedReason.NEED_TO_AUTHENTICATE));
-            send(sender, extraauth.Lang._("NeedToAuthenticate"));
-
-          } else if (extraauth.DB.Remove(player)) {
-            extraauth
-                .getServer()
-                .getPluginManager()
-                .callEvent(new UnregistrationSuccessfullEvent(player.getName()));
-            send(sender, extraauth.Lang._("Command.Disable.Success"));
-          } else {
-            extraauth
-                .getServer()
-                .getPluginManager()
-                .callEvent(
-                    new UnregistrationFailedEvent(new PlayerInformation(player
-                        .getName()), FailedReason.UNKNOWN));
-            send(sender, extraauth.Lang._("Command.Disable.Unknown.Failed"));
-          }
-
-        } else if (args[0].equalsIgnoreCase("help")) {
-          if (args.length > 1)
-            ShowHelp(sender, label, Integer.parseInt(args[1]));
-          else
-            ShowHelp(sender, label, 1);
-        } else if (args[0].equalsIgnoreCase("enable")) {
-          if (extraauth.DB.Get(player.getName()) != null
-              && !extraauth.DB.Get(player.getName()).Authed) {
-            extraauth
-                .getServer()
-                .getPluginManager()
-                .callEvent(
-                    new UnregistrationFailedEvent(new PlayerInformation(player
-                        .getName()), FailedReason.NEED_TO_AUTHENTICATE));
-            send(sender, extraauth.Lang._("NeedToAuthenticate"));
-
-          } else {
-            final PreRegistrationEvent event = new PreRegistrationEvent(player);
-            extraauth.getServer().getPluginManager().callEvent(event);
-
-            if (event.isCancelled()) {
-              extraauth
-                  .getServer()
-                  .getPluginManager()
-                  .callEvent(
-                      new RegistrationFailedEvent(player.getName(),
-                          FailedReason.CANCELED, AuthMethod.INVALID));
-              send(sender, extraauth.Lang._("Command.Enable.Event.Failed"));
-            } else if (args[1].equalsIgnoreCase("totp")) {
-              if ((Boolean) extraauth.Settings._("AuthMethod.TOTP")) {
-                send(sender, extraauth.Lang._("Command.Enable.Processing"));
-                extraauth
-                    .getServer()
-                    .getScheduler()
-                    .runTaskAsynchronously(extraauth,
-                        new ProcesssingTOTP(player));
-              } else
-                extraauth
-                    .getServer()
-                    .getPluginManager()
-                    .callEvent(
-                        new RegistrationFailedEvent(player.getName(),
-                            FailedReason.CONFIG_BLOCK, AuthMethod.TOTP));
-            } else if (args[1].equalsIgnoreCase("key")) {
-              if ((Boolean) extraauth.Settings._("AuthMethod.TOTP")) {
-
-                if (args.length > 2) {
-                  String key = args[2];
-                  for (int i = 3; i < args.length; i++)
-                    key += " " + args[i];
-
-                  final FailedReason reason = extraauth.DB.Add(player,
-                      AuthMethod.KEY, key);
-                  if (reason == FailedReason.SUCCESSFULL) {
-                    extraauth
-                        .getServer()
-                        .getPluginManager()
-                        .callEvent(
-                            new RegistrationSuccessfullEvent(
-                                new PlayerInformation(player.getName())));
-                    send(sender, extraauth.Lang._("Command.Enable.Key.Success"));
-                  } else {
-                    extraauth
-                        .getServer()
-                        .getPluginManager()
-                        .callEvent(
-                            new RegistrationFailedEvent(player.getName(),
-                                reason, AuthMethod.KEY));
-                    if (reason == FailedReason.ALREADY_REGISTERED)
-                      send(sender,
-                          extraauth.Lang
-                              ._("Command.Enable.AlreadyRegistered.Failed"));
-                    else if (reason == FailedReason.INVALID_METHOD)
-                      send(sender,
-                          extraauth.Lang
-                              ._("Command.Enable.InvalidMethod.Failed"));
-                    else
-                      send(sender,
-                          extraauth.Lang._("Command.Enable.Unknown.Failed"));
-                  }
-                } else
-                  extraauth
-                      .getServer()
-                      .getPluginManager()
-                      .callEvent(
-                          new RegistrationFailedEvent(player.getName(),
-                              FailedReason.CONFIG_BLOCK, AuthMethod.KEY));
-              } else
-                ShowHelp(sender, label, 1);
-            } else
-              ShowHelp(sender, label, 1);
-          }
-        } else {
-          final PreAuthenticateEvent event = new PreAuthenticateEvent(
-              new PlayerInformation(player.getName()));
-          extraauth.getServer().getPluginManager().callEvent(event);
-          if (event.isCancelled()) {
-            extraauth
-                .getServer()
-                .getPluginManager()
-                .callEvent(
-                    new AuthenticateFailedEvent(new PlayerInformation(player
-                        .getName()), FailedReason.CANCELED));
-            send(sender, extraauth.Lang._("Command.Auth.Event.Failed"));
-          } else {
-            String key = args[0];
-            for (int i = 1; i < args.length; i++)
-              key += " " + args[i];
-
-            final FailedReason ret = extraauth.DB.Auth(player, key);
-            if (ret == FailedReason.SUCCESSFULL) {
-              extraauth
-                  .getServer()
-                  .getPluginManager()
-                  .callEvent(
-                      new AuthenticateSuccessfullEvent(new PlayerInformation(
-                          player.getName())));
-              send(sender, extraauth.Lang._("Command.Auth.Success"));
-            } else {
-              extraauth
-                  .getServer()
-                  .getPluginManager()
-                  .callEvent(
-                      new AuthenticateFailedEvent(new PlayerInformation(player
-                          .getName()), ret));
-
-              if (ret == FailedReason.NOT_REGISTERED)
-                send(sender,
-                    extraauth.Lang._("Command.Auth.NotRegistered.Failed"));
-              else if (ret == FailedReason.ALREADY_AUTHED)
-                send(sender,
-                    extraauth.Lang._("Command.Auth.AlreadyAuthed.Failed"));
-              else if (ret == FailedReason.WRONG_KEY)
-                send(sender, extraauth.Lang._("Command.Auth.WrongKey.Failed"));
-              else if (ret == FailedReason.INVALID_METHOD)
-                send(sender,
-                    extraauth.Lang._("Command.Auth.InvalidMethod.Failed"));
-              else
-                send(sender, extraauth.Lang._("Command.Auth.Unknown.Failed"));
-            }
-          }
-        }
+        if (args[0].equalsIgnoreCase("reload") && p(sender, "auth.reload")
+            && isAuthed(sender))
+          extraauth.Reload();
+        else if (args[0].equalsIgnoreCase("disable")
+            && p(sender, "auth.disable", false) && isAuthed(sender))
+          Disable(sender);
+        else if (args[0].equalsIgnoreCase("disableother")
+            && p(sender, "auth.disableother", false) && isAuthed(sender))
+          DisableOther(sender, args);
+        else if (args[0].equalsIgnoreCase("help"))
+          Help(sender, label, args);
+        else if (args[0].equalsIgnoreCase("enable") && sender instanceof Player
+            && isAuthed(sender))
+          Enable(sender, label, args);
+        else if (args[0].equalsIgnoreCase("enableother") && isAuthed(sender))
+          EnableOther(sender, label, args);
+        else if (sender instanceof Player)
+          Auth(sender, args);
+        else
+          ShowHelp(sender, label, 1);
       } else
         ShowHelp(sender, label, 1);
     } catch (final ArrayIndexOutOfBoundsException e) {
@@ -356,12 +88,294 @@ public class AuthCommand implements CommandExecutor {
     return true;
   }
 
-  public String shorter(String url) throws IOException {
-    final String tinyUrlLookup = tinyUrl + URLEncoder.encode(url, "UTF-8");
-    final BufferedReader reader = new BufferedReader(new InputStreamReader(
-        new URL(tinyUrlLookup).openStream()));
-    final String tinyUrl = reader.readLine();
-    return tinyUrl;
+  private void Auth(CommandSender sender, String[] args) {
+    final Player player = (Player) sender;
+    final PreAuthenticateEvent event = new PreAuthenticateEvent(
+        new PlayerInformation(player.getName()));
+    extraauth.getServer().getPluginManager().callEvent(event);
+    if (event.isCancelled()) {
+      extraauth
+          .getServer()
+          .getPluginManager()
+          .callEvent(
+              new AuthenticateFailedEvent(new PlayerInformation(player
+                  .getName()), FailedReason.CANCELED));
+      send(sender, extraauth.Lang._("Command.Auth.Event.Failed"));
+    } else {
+      final FailedReason ret = extraauth.DB.Auth(player, (Object[]) args);
+      if (ret == FailedReason.SUCCESSFULL) {
+        extraauth
+            .getServer()
+            .getPluginManager()
+            .callEvent(
+                new AuthenticateSuccessfullEvent(new PlayerInformation(player
+                    .getName())));
+        send(sender, extraauth.Lang._("Command.Auth.Success"));
+      } else {
+        extraauth
+            .getServer()
+            .getPluginManager()
+            .callEvent(
+                new AuthenticateFailedEvent(new PlayerInformation(player
+                    .getName()), ret));
+
+        if (ret == FailedReason.NOT_REGISTERED)
+          send(sender, extraauth.Lang._("Command.Auth.NotRegistered.Failed"));
+        else if (ret == FailedReason.ALREADY_AUTHED)
+          send(sender, extraauth.Lang._("Command.Auth.AlreadyAuthed.Failed"));
+        else if (ret == FailedReason.WRONG_KEY)
+          send(sender, extraauth.Lang._("Command.Auth.WrongKey.Failed"));
+        else if (ret == FailedReason.INVALID_METHOD)
+          send(sender, extraauth.Lang._("Command.Auth.InvalidMethod.Failed"));
+        else if (ret == FailedReason.INVALID_ARGS)
+          send(sender, extraauth.Lang._("Command.InvalidArgs"));
+        else
+          send(sender, extraauth.Lang._("Command.Auth.Unknown.Failed"));
+      }
+    }
+
+  }
+
+  private void Disable(CommandSender sender) {
+    final Player player = (Player) sender;
+    final PreUnregistrationEvent event = new PreUnregistrationEvent(
+        new PlayerInformation(player.getName()));
+    extraauth.getServer().getPluginManager().callEvent(event);
+
+    if (event.isCancelled()) {
+      extraauth
+          .getServer()
+          .getPluginManager()
+          .callEvent(
+              new UnregistrationFailedEvent(new PlayerInformation(player
+                  .getName()), FailedReason.CANCELED));
+      send(sender, extraauth.Lang._("Command.Disable.Event.Failed"));
+    } else if (!extraauth.DB.Contains(player.getName())) {
+      extraauth
+          .getServer()
+          .getPluginManager()
+          .callEvent(
+              new UnregistrationFailedEvent(new PlayerInformation(player
+                  .getName()), FailedReason.NOT_REGISTERED));
+      send(sender, extraauth.Lang._("Command.Disable.NotRegistered.Failed"));
+    } else if (!extraauth.DB.Get(player.getName()).Authed) {
+      extraauth
+          .getServer()
+          .getPluginManager()
+          .callEvent(
+              new UnregistrationFailedEvent(new PlayerInformation(player
+                  .getName()), FailedReason.NEED_TO_AUTHENTICATE));
+      send(sender, extraauth.Lang._("NeedToAuthenticate"));
+
+    } else if (extraauth.DB.Remove(player.getName()) == FailedReason.SUCCESSFULL) {
+      extraauth.getServer().getPluginManager()
+          .callEvent(new UnregistrationSuccessfullEvent(player.getName()));
+      send(sender, extraauth.Lang._("Command.Disable.Success"));
+    } else {
+      extraauth
+          .getServer()
+          .getPluginManager()
+          .callEvent(
+              new UnregistrationFailedEvent(new PlayerInformation(player
+                  .getName()), FailedReason.UNKNOWN));
+      send(sender, extraauth.Lang._("Command.Disable.Unknown.Failed"));
+    }
+  }
+
+  private void DisableOther(CommandSender sender, String[] args) {
+    if (args.length < 2 && extraauth.DB.Contains(args[1])) {
+      send(sender, extraauth.Lang._("Command.NoPlayer"));
+      return;
+    }
+    final PreUnregistrationEvent event = new PreUnregistrationEvent(
+        new PlayerInformation(args[1]));
+    extraauth.getServer().getPluginManager().callEvent(event);
+
+    if (event.isCancelled()) {
+      extraauth
+          .getServer()
+          .getPluginManager()
+          .callEvent(
+              new UnregistrationFailedEvent(new PlayerInformation(args[1]),
+                  FailedReason.CANCELED));
+      send(sender, extraauth.Lang._("Command.Disable.Event.Failed"));
+    } else if (!extraauth.DB.Contains(args[1])
+        && extraauth.DB.Get(args[1]) != null) {
+      extraauth
+          .getServer()
+          .getPluginManager()
+          .callEvent(
+              new UnregistrationFailedEvent(new PlayerInformation(args[1]),
+                  FailedReason.NOT_REGISTERED));
+      send(sender,
+          extraauth.Lang._("Command.Disable.NotRegistered.Other.Failed"));
+    } else if (extraauth.DB.Remove(args[1], false) == FailedReason.SUCCESSFULL) {
+      extraauth.getServer().getPluginManager()
+          .callEvent(new UnregistrationSuccessfullEvent(args[1]));
+      send(sender, extraauth.Lang._("Command.Disable.Other.Success"));
+    } else {
+      extraauth
+          .getServer()
+          .getPluginManager()
+          .callEvent(
+              new UnregistrationFailedEvent(new PlayerInformation(args[1]),
+                  FailedReason.UNKNOWN));
+      send(sender, extraauth.Lang._("Command.Disable.Unknown.Failed"));
+
+    }
+  }
+
+  private void Enable(CommandSender sender, String label, String[] args) {
+
+    final Player player = (Player) sender;
+    if (args.length < 2) {
+      ShowHelp(sender, label, 1);
+      return;
+    }
+    if (extraauth.DB.Get(player.getName()) != null
+        && !extraauth.DB.Get(player.getName()).Authed) {
+      extraauth
+          .getServer()
+          .getPluginManager()
+          .callEvent(
+              new UnregistrationFailedEvent(new PlayerInformation(player
+                  .getName()), FailedReason.NEED_TO_AUTHENTICATE));
+      send(sender, extraauth.Lang._("NeedToAuthenticate"));
+    } else {
+      final PreRegistrationEvent event = new PreRegistrationEvent(
+          player.getName());
+      extraauth.getServer().getPluginManager().callEvent(event);
+
+      if (event.isCancelled()) {
+        extraauth
+            .getServer()
+            .getPluginManager()
+            .callEvent(
+                new RegistrationFailedEvent(player.getName(),
+                    FailedReason.CANCELED, AuthManager.GetAuthMethod("Unknown")));
+        send(sender, extraauth.Lang._("Command.Enable.Event.Failed"));
+      } else if (p(player, "auth.enable." + args[1].toLowerCase())) {
+        if (args.length > 2) {
+          final Object arg[] = Arrays.copyOfRange(args, 2, args.length);
+
+          final FailedReason reason = extraauth.DB.Add(player.getName(),
+              AuthManager.GetAuthMethod(args[1].toLowerCase()), arg);
+          if (reason == FailedReason.SUCCESSFULL) {
+            extraauth
+                .getServer()
+                .getPluginManager()
+                .callEvent(
+                    new RegistrationSuccessfullEvent(new PlayerInformation(
+                        player.getName())));
+            send(sender, extraauth.Lang._("Command.Enable.General.Success"));
+          } else {
+            extraauth
+                .getServer()
+                .getPluginManager()
+                .callEvent(
+                    new RegistrationFailedEvent(player.getName(), reason,
+                        AuthManager.GetAuthMethod(args[1].toLowerCase())));
+            if (reason == FailedReason.ALREADY_REGISTERED)
+              send(sender,
+                  extraauth.Lang._("Command.Enable.AlreadyRegistered.Failed"));
+            else if (reason == FailedReason.INVALID_METHOD)
+              send(sender,
+                  extraauth.Lang._("Command.Enable.InvalidMethod.Failed"));
+            else if (reason == FailedReason.INVALID_ARGS)
+              ShowHelp(sender, label, 1);
+            else
+              send(sender, extraauth.Lang._("Command.Enable.Unknown.Failed"));
+          }
+        } else
+          ShowHelp(sender, label, 1);
+      } else
+        ShowHelp(sender, label, 1);
+    }
+  }
+
+  private void EnableOther(CommandSender sender, String label, String[] args) {
+    if (args.length < 4) {
+      ShowHelp(sender, label, 1);
+      return;
+    }
+
+    final PreRegistrationEvent event = new PreRegistrationEvent(args[2]);
+    extraauth.getServer().getPluginManager().callEvent(event);
+
+    if (event.isCancelled()) {
+      extraauth
+          .getServer()
+          .getPluginManager()
+          .callEvent(
+              new RegistrationFailedEvent(args[2], FailedReason.CANCELED,
+                  AuthManager.GetAuthMethod("Unknown")));
+      send(sender, extraauth.Lang._("Command.Enable.Event.Failed"));
+    } else if (p(sender, "auth.enableother." + args[1].toLowerCase())
+        && AuthManager.GetAuthMethod(args[1]).AllowOtherToEnable()) {
+      if (args.length > 3) {
+        final Object arg[] = Arrays.copyOfRange(args, 3, args.length);
+
+        final FailedReason reason = extraauth.DB.Add(args[2],
+            AuthManager.GetAuthMethod(args[1]), arg);
+        if (reason == FailedReason.SUCCESSFULL) {
+          extraauth
+              .getServer()
+              .getPluginManager()
+              .callEvent(
+                  new RegistrationSuccessfullEvent(new PlayerInformation(
+                      args[2])));
+          send(sender, extraauth.Lang._("Command.Enable.Other.General.Success"));
+        } else {
+          extraauth
+              .getServer()
+              .getPluginManager()
+              .callEvent(
+                  new RegistrationFailedEvent(args[2], reason, AuthManager
+                      .GetAuthMethod(args[1].toLowerCase())));
+          if (reason == FailedReason.ALREADY_REGISTERED)
+            send(sender,
+                extraauth.Lang
+                    ._("Command.Enable.Other.AlreadyRegistered.Failed"));
+          else if (reason == FailedReason.INVALID_METHOD)
+            send(sender,
+                extraauth.Lang._("Command.Enable.InvalidMethod.Failed"));
+          else if (reason == FailedReason.INVALID_ARGS)
+            ShowHelp(sender, label, 1);
+          else
+            send(sender, extraauth.Lang._("Command.Enable.Unknown.Failed"));
+        }
+      } else
+        ShowHelp(sender, label, 1);
+    } else
+      ShowHelp(sender, label, 1);
+  }
+
+  private void Help(CommandSender sender, String label, String[] args) {
+
+    if (args.length > 1)
+      ShowHelp(sender, label, Integer.parseInt(args[1]));
+    else
+      ShowHelp(sender, label, 1);
+
+  }
+
+  private boolean isAuthed(CommandSender sender) {
+    if (sender instanceof Player)
+      return extraauth.DB.IsAuth((Player) sender);
+    else
+      return true;
+  }
+
+  private boolean p(CommandSender sender, String permissions) {
+    return p(sender, permissions, true);
+  }
+
+  private boolean p(CommandSender sender, String permissions,
+      boolean consoleDefault) {
+    if (sender instanceof Player)
+      return extraauth.Vault.HasPermissions((Player) sender, permissions);
+    else
+      return consoleDefault;
   }
 
   private void send(CommandSender sender, String msg) {
@@ -378,30 +392,70 @@ public class AuthCommand implements CommandExecutor {
         + " help "
         + extraauth.Lang._("Command.Help").replaceFirst("- ",
             ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
-    cmds.add(ChatColor.YELLOW
-        + "/"
-        + label
-        + " enable totp "
-        + extraauth.Lang._("Command.Enable.TOTP.Help").replaceFirst("- ",
-            ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
-    cmds.add(ChatColor.YELLOW
-        + "/"
-        + label
-        + " enable key "
-        + extraauth.Lang._("Command.Enable.Key.Help").replaceFirst("- ",
-            ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
-    cmds.add(ChatColor.YELLOW
-        + "/"
-        + label
-        + " disable "
-        + extraauth.Lang._("Command.Disable.Help").replaceFirst("- ",
-            ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
-    cmds.add(ChatColor.YELLOW
-        + "/"
-        + label
-        + " "
-        + extraauth.Lang._("Command.Auth.Help").replaceFirst("- ",
-            ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
+
+    if (p(sender, "tgym.reload") && isAuthed(sender))
+      cmds.add(ChatColor.YELLOW
+          + "/"
+          + label
+          + " reload "
+          + extraauth.Lang._("Command.Reload").replaceFirst("- ",
+              ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
+
+    if (sender instanceof Player
+        && new PlayerInformation(sender.getName()).getExist())
+      cmds.add(ChatColor.YELLOW
+          + "/"
+          + label
+          + " "
+          + extraauth.Lang._("Command.Auth.Help").replaceFirst("- ",
+              ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
+
+    for (final Class<? extends AuthMethod> clazz : AuthManager.Methods)
+      try {
+        final AuthMethod method = clazz.newInstance();
+
+        if (p(sender, "tgym.enable." + method.GetName().toLowerCase(), false)
+            && isAuthed(sender))
+          cmds.add(ChatColor.YELLOW
+              + "/"
+              + label
+              + " enable "
+              + method.GetName().toLowerCase()
+              + " "
+              + method.GetHelpLine(
+                  (String) extraauth.Settings._("Language", "en-US"))
+                  .replaceFirst("- ",
+                      ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
+        if (p(sender, "tgym.enableother." + method.GetName().toLowerCase(),
+            true) && method.AllowOtherToEnable() && isAuthed(sender))
+          cmds.add(ChatColor.YELLOW
+              + "/"
+              + label
+              + " enableother "
+              + method.GetName().toLowerCase()
+              + " "
+              + method.GetOtherHelpLine(
+                  (String) extraauth.Settings._("Language", "en-US"))
+                  .replaceFirst("- ",
+                      ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
+      } catch (final Exception e) {
+      }
+
+    if (p(sender, "tgym.disable", false) && isAuthed(sender))
+      cmds.add(ChatColor.YELLOW
+          + "/"
+          + label
+          + " disable "
+          + extraauth.Lang._("Command.Disable.Help").replaceFirst("- ",
+              ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
+
+    if (p(sender, "tgym.disableother") && isAuthed(sender))
+      cmds.add(ChatColor.YELLOW
+          + "/"
+          + label
+          + " disableother "
+          + extraauth.Lang._("Command.Disable.Other.Help").replaceFirst("- ",
+              ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
 
     final int maxpage = 1 + cmds.size() / 6;
     if (page < 1)
@@ -411,10 +465,12 @@ public class AuthCommand implements CommandExecutor {
     sender.sendMessage(""
         + ChatColor.RED
         + ChatColor.BOLD
-        + extraauth.Lang._("Command.Title")
+        + extraauth.Lang
+            ._("Command.Title")
             .replaceAll("%VERSION%", extraauth.Version)
             .replaceAll("%PAGE%", "" + ChatColor.RED + page + ChatColor.AQUA)
-            .replaceAll("%MAXPAGE%", "" + ChatColor.BLUE + maxpage)
+            .replaceAll("%MAXPAGE%",
+                "" + ChatColor.BLUE + maxpage + ChatColor.GOLD)
             .replaceAll("%AUTHOR%", ChatColor.YELLOW + "WildN00b"));
     try {
       for (int i = (page - 1) * 6; i < ((page - 1) * 6) + 6; i++)

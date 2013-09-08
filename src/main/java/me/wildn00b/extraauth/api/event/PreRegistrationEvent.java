@@ -19,7 +19,6 @@
 
 package me.wildn00b.extraauth.api.event;
 
-import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -28,13 +27,12 @@ import org.bukkit.event.HandlerList;
  * PreRegistrationEvent is an event that is called when an authentication was failed.
  * 
  * @author Dan "WildN00b" Printzell
- * @version 1.0.0
  * @since 1.0.0
  */
 public class PreRegistrationEvent extends Event implements Cancellable {
   private static final HandlerList handlers = new HandlerList();
   private Boolean cancelled;
-  private final Player player;
+  private final String player;
 
   /**
    * Creates a PreRegistrationEvent instance.
@@ -44,7 +42,7 @@ public class PreRegistrationEvent extends Event implements Cancellable {
    *          The player
    * 
    */
-  public PreRegistrationEvent(Player player) {
+  public PreRegistrationEvent(String player) {
     super(false);
     this.player = player;
     cancelled = false;
@@ -58,7 +56,7 @@ public class PreRegistrationEvent extends Event implements Cancellable {
   /**
    * @return Returns the player information.
    */
-  public Player getPlayer() {
+  public String getPlayer() {
     return player;
   }
 

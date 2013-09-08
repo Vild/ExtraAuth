@@ -26,7 +26,6 @@ import org.bukkit.event.HandlerList;
  * UnregistrationSuccessfullEvent is an event that is called when an authentication was failed.
  * 
  * @author Dan "WildN00b" Printzell
- * @version 1.0.0
  * @since 1.0.0
  */
 public class UnregistrationSuccessfullEvent extends Event {

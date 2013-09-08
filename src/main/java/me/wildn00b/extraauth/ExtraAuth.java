@@ -19,12 +19,15 @@
 
 package me.wildn00b.extraauth;
 
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import me.wildn00b.extraauth.command.AuthCommand;
 import me.wildn00b.extraauth.io.Language;
 import me.wildn00b.extraauth.io.PlayerStatusDB;
 import me.wildn00b.extraauth.io.Settings;
+import me.wildn00b.extraauth.io.Vault;
+import me.wildn00b.extraauth.listener.PlayerListener;
 
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -32,11 +35,11 @@ public class ExtraAuth extends JavaPlugin {
 
   public static ExtraAuth INSTANCE;
 
-  public static final Logger log = Logger.getLogger("Minecraft");
-
-  public PlayerStatusDB DB;
-  public Language Lang;
-  public Settings Settings;
+  public PlayerStatusDB DB = null;
+  public Language Lang = null;
+  public Logger Log = Logger.getLogger("Minecraft");
+  public Settings Settings = null;
+  public Vault Vault = null;
 
   public String Version;
 
@@ -44,48 +47,9 @@ public class ExtraAuth extends JavaPlugin {
     INSTANCE = this;
   }
 
-  public void _(String msg) {
-    _(msg, true);
-  }
-
-  public void _(String msg, boolean lang) {
-    if (lang && Lang != null)
-      log.info("[ExtraAuth] " + Lang._(msg));
-    else
-      log.info("[ExtraAuth] " + msg);
-  }
-
-  public void _E(String msg) {
-    _E(msg, true);
-  }
-
-  public void _E(String msg, boolean lang) {
-    if (lang && Lang != null)
-      log.severe("[ExtraAuth] " + Lang._(msg));
-    else
-      log.severe("[ExtraAuth] " + msg);
-  }
-
-  public void _W(String msg) {
-    _W(msg, true);
-  }
-
-  public void _W(String msg, boolean lang) {
-    if (lang && Lang != null)
-      log.warning("[ExtraAuth] " + Lang._(msg));
-    else
-      log.warning("[ExtraAuth] " + msg);
-  }
-
   @Override
   public void onDisable() {
-    DB.Save();
-    DB = null;
-    _(Lang._("ExtraAuth.Disable"));
-    Lang.Close();
-    Lang = null;
-    Settings.Close();
-    Settings = null;
+    Log.log(Level.INFO, Lang._("ExtraAuth.Disable"));
   }
 
   @Override
@@ -93,6 +57,7 @@ public class ExtraAuth extends JavaPlugin {
     Settings = new Settings(this);
     Lang = new Language(this);
     DB = new PlayerStatusDB(this);
+    Vault = new Vault(this);
 
     getCommand("auth").setExecutor(new AuthCommand(this));
     getServer().getPluginManager().registerEvents(new PlayerListener(this),
@@ -100,7 +65,19 @@ public class ExtraAuth extends JavaPlugin {
 
     Version = getDescription().getVersion();
 
-    _(Lang._("ExtraAuth.Enable"));
+    try {
+      final Metrics metrics = new Metrics(this);
+      metrics.findCustomData();
+      metrics.start();
+    } catch (final Exception e) {
+    }
+
+    Log.log(Level.INFO, Lang._("ExtraAuth.Enable"));
+  }
+
+  public void Reload() {
+    Settings = new Settings(this);
+    Lang = new Language(this);
   }
 
 }

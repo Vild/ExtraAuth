@@ -17,38 +17,44 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-package me.wildn00b.extraauth.auth;
+package me.wildn00b.extraauth.api;
 
-public enum AuthMethod {
-  INVALID(-1, "INVALID"), KEY(1, "KEY"), TOTP(0, "TOTP");
+import java.util.ArrayList;
 
-  private int id;
-  private String name;
+import me.wildn00b.extraauth.auth.key.Key;
+import me.wildn00b.extraauth.auth.onetimekey.OneTimeKey;
+import me.wildn00b.extraauth.auth.totp.TOTPAuth;
 
-  AuthMethod(int id, String name) {
-    this.id = id;
-    this.name = name;
+public class AuthManager {
+
+  public static ArrayList<Class<? extends AuthMethod>> Methods = new ArrayList<Class<? extends AuthMethod>>();
+
+  static {
+    Methods.add(TOTPAuth.class);
+    Methods.add(Key.class);
+    Methods.add(OneTimeKey.class);
   }
 
-  public int GetID() {
-    return id;
-  }
-
-  public String GetName() {
-    return name;
-  }
-
-  public static AuthMethod GetAuthMethod(int id) {
-    for (final AuthMethod item : values())
-      if (item.GetID() == id)
-        return item;
-    return INVALID;
-  }
-
+  /**
+   * Returns a instance of the AuthMethod, Null if it can't it.
+   * 
+   * @param name
+   *          the method name
+   * @return The instance
+   */
   public static AuthMethod GetAuthMethod(String name) {
-    for (final AuthMethod item : values())
-      if (item.GetName().equalsIgnoreCase(name))
-        return item;
-    return INVALID;
+    try {
+      for (final Class<? extends AuthMethod> item : Methods) {
+        AuthMethod method;
+
+        method = item.newInstance();
+
+        if (method.GetName().equalsIgnoreCase(name))
+          return method;
+      }
+    } catch (final Exception e) {
+      e.printStackTrace();
+    }
+    return null;
   }
 }
