@@ -172,7 +172,8 @@ public class PlayerListener implements Listener {
 
   @EventHandler(priority = EventPriority.HIGHEST)
   public void onEntityTarget(EntityTargetEvent event) {
-    if (event.getTarget().getType() == EntityType.PLAYER) {
+    if (event.getTarget() != null
+        && event.getTarget().getType() == EntityType.PLAYER) {
       final Player player = (Player) event.getTarget();
       if (isFrozen(player) && (!event.isCancelled()))
         event.setCancelled(true);
