@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>me.wildn00b</groupId>
 	<artifactId>extraauth</artifactId>
-	<version>1.2.0</version>
+	<version>1.2.1</version>
 	<name>ExtraAuth</name>
 	<description>Extra authentication for accessing account or other plugins (which uses my API).</description>
 	<url>http://dev.bukkit.org/server-mods/ExtraAuth/</url>
