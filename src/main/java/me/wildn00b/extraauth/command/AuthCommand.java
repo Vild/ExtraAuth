@@ -51,43 +51,6 @@ public class AuthCommand implements CommandExecutor {
     this.extraauth = extraauth;
   }
 
-  @Override
-  public boolean onCommand(CommandSender sender, Command command, String label,
-      String[] args) {
-    try {
-      if (args.length > 0) {
-        if (args[0].equalsIgnoreCase("reload") && p(sender, "auth.reload")
-            && isAuthed(sender))
-          extraauth.Reload();
-        else if (args[0].equalsIgnoreCase("disable")
-            && p(sender, "auth.disable", false) && isAuthed(sender))
-          Disable(sender);
-        else if (args[0].equalsIgnoreCase("disableother")
-            && p(sender, "auth.disableother", false) && isAuthed(sender))
-          DisableOther(sender, args);
-        else if (args[0].equalsIgnoreCase("help"))
-          Help(sender, label, args);
-        else if (args[0].equalsIgnoreCase("enable") && sender instanceof Player
-            && isAuthed(sender))
-          Enable(sender, label, args);
-        else if (args[0].equalsIgnoreCase("enableother") && isAuthed(sender))
-          EnableOther(sender, label, args);
-        else if (sender instanceof Player)
-          Auth(sender, args);
-        else
-          ShowHelp(sender, label, 1);
-      } else
-        ShowHelp(sender, label, 1);
-    } catch (final ArrayIndexOutOfBoundsException e) {
-      ShowHelp(sender, label, 1);
-    } catch (final Exception e) {
-      e.printStackTrace();
-      send(sender, extraauth.Lang._("Command.Exception"));
-    }
-
-    return true;
-  }
-
   private void Auth(CommandSender sender, String[] args) {
     final Player player = (Player) sender;
     final PreAuthenticateEvent event = new PreAuthenticateEvent(
@@ -134,6 +97,19 @@ public class AuthCommand implements CommandExecutor {
       }
     }
 
+  }
+
+  private boolean canUseCommand(CommandSender sender,
+      CommandAccountPermission needAccount) {
+    if (sender instanceof Player)
+      if (extraauth.DB.Contains(((Player) sender).getName())
+          && needAccount.isNeedAccount())
+        return extraauth.DB.IsAuth((Player) sender)
+            || needAccount.isNeedLoggedIn();
+      else
+        return true;
+    else
+      return true;
   }
 
   private void Disable(CommandSender sender) {
@@ -359,11 +335,44 @@ public class AuthCommand implements CommandExecutor {
 
   }
 
-  private boolean isAuthed(CommandSender sender) {
-    if (sender instanceof Player)
-      return extraauth.DB.IsAuth((Player) sender);
-    else
-      return true;
+  @Override
+  public boolean onCommand(CommandSender sender, Command command, String label,
+      String[] args) {
+    try {
+      if (args.length > 0) {
+        if (args[0].equalsIgnoreCase("reload") && p(sender, "auth.reload")
+            && canUseCommand(sender, CommandAccountPermission.NO_ACCOUNT))
+          extraauth.Reload();
+        else if (args[0].equalsIgnoreCase("disable")
+            && p(sender, "auth.disable", false)
+            && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
+          Disable(sender);
+        else if (args[0].equalsIgnoreCase("disableother")
+            && p(sender, "auth.disableother", false)
+            && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
+          DisableOther(sender, args);
+        else if (args[0].equalsIgnoreCase("help"))
+          Help(sender, label, args);
+        else if (args[0].equalsIgnoreCase("enable") && sender instanceof Player
+            && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
+          Enable(sender, label, args);
+        else if (args[0].equalsIgnoreCase("enableother")
+            && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
+          EnableOther(sender, label, args);
+        else if (sender instanceof Player)
+          Auth(sender, args);
+        else
+          ShowHelp(sender, label, 1);
+      } else
+        ShowHelp(sender, label, 1);
+    } catch (final ArrayIndexOutOfBoundsException e) {
+      ShowHelp(sender, label, 1);
+    } catch (final Exception e) {
+      e.printStackTrace();
+      send(sender, extraauth.Lang._("Command.Exception"));
+    }
+
+    return true;
   }
 
   private boolean p(CommandSender sender, String permissions) {
@@ -393,7 +402,8 @@ public class AuthCommand implements CommandExecutor {
         + extraauth.Lang._("Command.Help").replaceFirst("- ",
             ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
 
-    if (p(sender, "tgym.reload") && isAuthed(sender))
+    if (p(sender, "tgym.reload")
+        && canUseCommand(sender, CommandAccountPermission.NO_ACCOUNT))
       cmds.add(ChatColor.YELLOW
           + "/"
           + label
@@ -415,7 +425,7 @@ public class AuthCommand implements CommandExecutor {
         final AuthMethod method = clazz.newInstance();
 
         if (p(sender, "tgym.enable." + method.GetName().toLowerCase(), false)
-            && isAuthed(sender))
+            && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
           cmds.add(ChatColor.YELLOW
               + "/"
               + label
@@ -427,7 +437,9 @@ public class AuthCommand implements CommandExecutor {
                   .replaceFirst("- ",
                       ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
         if (p(sender, "tgym.enableother." + method.GetName().toLowerCase(),
-            true) && method.AllowOtherToEnable() && isAuthed(sender))
+            true)
+            && method.AllowOtherToEnable()
+            && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
           cmds.add(ChatColor.YELLOW
               + "/"
               + label
@@ -441,7 +453,8 @@ public class AuthCommand implements CommandExecutor {
       } catch (final Exception e) {
       }
 
-    if (p(sender, "tgym.disable", false) && isAuthed(sender))
+    if (p(sender, "tgym.disable", false)
+        && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
       cmds.add(ChatColor.YELLOW
           + "/"
           + label
@@ -449,7 +462,8 @@ public class AuthCommand implements CommandExecutor {
           + extraauth.Lang._("Command.Disable.Help").replaceFirst("- ",
               ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
 
-    if (p(sender, "tgym.disableother") && isAuthed(sender))
+    if (p(sender, "tgym.disableother")
+        && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
       cmds.add(ChatColor.YELLOW
           + "/"
           + label

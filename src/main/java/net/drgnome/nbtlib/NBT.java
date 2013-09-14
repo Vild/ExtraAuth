@@ -29,23 +29,6 @@ public enum NBT {
   BOOL(-1), BYTE(1), BYTE_ARRAY(7), COMPOUND(10), DOUBLE(6), END(0), FLOAT(5), INT(
       3), INT_ARRAY(11), LIST(9), LONG(4), SHORT(2), STRING(8);
 
-  private final int _id;
-
-  private NBT(int id) {
-    _id = id;
-  }
-
-  /**
-   * <p>
-   * Returns the ID of the NBT Tag represented by this enum constant.
-   * </p>
-   * 
-   * @return The ID.
-   */
-  public int getId() {
-    return _id;
-  }
-
   /**
    * <p>
    * Converts a Bukkit ItemStack into a Minecraft ItemStack.
@@ -99,6 +82,16 @@ public enum NBT {
       InstantiationException, InvocationTargetException, NoSuchFieldException,
       NoSuchMethodException, NBTLibDisabledException, UnknownTagException {
     return NBTToMap(saveItem(bukkitToMc(item)));
+  }
+
+  // NBTTagCompound => ItemStack
+  private static Object loadItem(Object nbt) throws ClassNotFoundException,
+      IllegalAccessException, InvocationTargetException, NoSuchMethodException,
+      NBTLibDisabledException {
+    return NBTLib.invokeMinecraftDynamic("ItemStack", null,
+        NBTLib.getMinecraftPackage() + "ItemStack",
+        new Object[] { NBTLib.getMinecraftPackage() + "NBTTagCompound" },
+        new Object[] { nbt });
   }
 
   /**
@@ -363,6 +356,17 @@ public enum NBT {
     throw new UnknownTagException();
   }
 
+  // ItemStack => NBTTagCompound
+  private static Object saveItem(Object item) throws ClassNotFoundException,
+      IllegalAccessException, InstantiationException,
+      InvocationTargetException, NoSuchMethodException, NBTLibDisabledException {
+    return NBTLib.invokeMinecraftDynamic("ItemStack", item,
+        NBTLib.getMinecraftPackage() + "NBTTagCompound",
+        new Object[] { NBTLib.getMinecraftPackage() + "NBTTagCompound" },
+        new Object[] { NBTLib.instantiateMinecraft("NBTTagCompound",
+            new Object[0], new Object[0]) });
+  }
+
   /**
    * <p>
    * Saves a Bukkit ItemStack to a {@link DataOutput} object (using NBT).
@@ -581,24 +585,20 @@ public enum NBT {
     return null;
   }
 
-  // NBTTagCompound => ItemStack
-  private static Object loadItem(Object nbt) throws ClassNotFoundException,
-      IllegalAccessException, InvocationTargetException, NoSuchMethodException,
-      NBTLibDisabledException {
-    return NBTLib.invokeMinecraftDynamic("ItemStack", null,
-        NBTLib.getMinecraftPackage() + "ItemStack",
-        new Object[] { NBTLib.getMinecraftPackage() + "NBTTagCompound" },
-        new Object[] { nbt });
+  private final int _id;
+
+  private NBT(int id) {
+    _id = id;
   }
 
-  // ItemStack => NBTTagCompound
-  private static Object saveItem(Object item) throws ClassNotFoundException,
-      IllegalAccessException, InstantiationException,
-      InvocationTargetException, NoSuchMethodException, NBTLibDisabledException {
-    return NBTLib.invokeMinecraftDynamic("ItemStack", item,
-        NBTLib.getMinecraftPackage() + "NBTTagCompound",
-        new Object[] { NBTLib.getMinecraftPackage() + "NBTTagCompound" },
-        new Object[] { NBTLib.instantiateMinecraft("NBTTagCompound",
-            new Object[0], new Object[0]) });
+  /**
+   * <p>
+   * Returns the ID of the NBT Tag represented by this enum constant.
+   * </p>
+   * 
+   * @return The ID.
+   */
+  public int getId() {
+    return _id;
   }
 }
