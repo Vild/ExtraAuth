@@ -101,13 +101,10 @@ public class AuthCommand implements CommandExecutor {
 
   private boolean canUseCommand(CommandSender sender,
       CommandAccountPermission needAccount) {
-    if (sender instanceof Player)
-      if (extraauth.DB.Contains(((Player) sender).getName())
-          && needAccount.isNeedAccount())
-        return extraauth.DB.IsAuth((Player) sender)
-            || needAccount.isNeedLoggedIn();
-      else
-        return true;
+    if (sender instanceof Player
+        && extraauth.DB.Contains(((Player) sender).getName())
+        && needAccount.isNeedAccount() && needAccount.isNeedLoggedIn())
+      return extraauth.DB.IsAuth((Player) sender);
     else
       return true;
   }
@@ -354,12 +351,13 @@ public class AuthCommand implements CommandExecutor {
         else if (args[0].equalsIgnoreCase("help"))
           Help(sender, label, args);
         else if (args[0].equalsIgnoreCase("enable") && sender instanceof Player
-            && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
+            && canUseCommand(sender, CommandAccountPermission.NO_ACCOUNT))
           Enable(sender, label, args);
         else if (args[0].equalsIgnoreCase("enableother")
             && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
           EnableOther(sender, label, args);
-        else if (sender instanceof Player)
+        else if (sender instanceof Player
+            && canUseCommand(sender, CommandAccountPermission.NEED_ACCOUNT))
           Auth(sender, args);
         else
           ShowHelp(sender, label, 1);
@@ -395,12 +393,13 @@ public class AuthCommand implements CommandExecutor {
   private void ShowHelp(CommandSender sender, String label, int page) {
     final ArrayList<String> cmds = new ArrayList<String>();
 
-    cmds.add(ChatColor.YELLOW
-        + "/"
-        + label
-        + " help "
-        + extraauth.Lang._("Command.Help").replaceFirst("- ",
-            ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
+    if (canUseCommand(sender, CommandAccountPermission.NEED_ACCOUNT))
+      cmds.add(ChatColor.YELLOW
+          + "/"
+          + label
+          + " help "
+          + extraauth.Lang._("Command.Help").replaceFirst("- ",
+              ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
 
     if (p(sender, "tgym.reload")
         && canUseCommand(sender, CommandAccountPermission.NO_ACCOUNT))
