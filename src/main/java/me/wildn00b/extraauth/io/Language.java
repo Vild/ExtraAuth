@@ -44,9 +44,8 @@ public class Language {
       if (path.exists())
         file.load(path);
       else {
-        extraauth.Log
-            .log(Level.WARNING,
-                "[TimeGivesYouMoney] Couldn't find language file, reverting to en-US");
+        extraauth.Log.log(Level.WARNING,
+            "[ExtraAuth] Couldn't find language file, reverting to en-US");
         path = new File(partpath + "en-US.yml");
       }
       addDefaults();
