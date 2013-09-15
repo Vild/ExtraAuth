@@ -19,24 +19,55 @@
 
 package me.wildn00b.extraauth.command;
 
+import me.wildn00b.extraauth.ExtraAuth;
+import me.wildn00b.extraauth.io.PlayerStatusDB;
+
 public enum CommandAccountPermission {
-  NEED_ACCOUNT(true, false), NEED_LOGGEDIN(true, true), NO_ACCOUNT(false, false);
+  GOT_ACCOUNT_AND_LOGGED_IN(new Check() {
+    @Override
+    public boolean Run(String player) {
+      if (DB.Contains(player))
+        return DB.Get(player).Authed;
+      else
+        return false;
+    }
+  }), LOGGED_IN(new Check() {
+    @Override
+    public boolean Run(String player) {
+      if (DB.Contains(player))
+        return DB.Get(player).Authed;
+      else
+        return true;
+    }
+  }), NO_ACCOUNT(new Check() {
+    @Override
+    public boolean Run(String player) {
+      return !DB.Contains(player);
+    }
+  }), NOT_LOGGED_IN(new Check() {
+    @Override
+    public boolean Run(String player) {
+      if (DB.Contains(player))
+        return !DB.Get(player).Authed;
+      else
+        return false;
+    }
+  });
 
-  private boolean needAccount;
+  public abstract interface Check {
+    PlayerStatusDB DB = ExtraAuth.INSTANCE.DB;
 
-  private boolean needLoggedIn;
-
-  CommandAccountPermission(boolean needAccount, boolean needLoggedIn) {
-    this.needAccount = needAccount;
-    this.needLoggedIn = needLoggedIn;
+    public abstract boolean Run(String player);
   }
 
-  public boolean isNeedAccount() {
-    return needAccount;
+  private Check check;
+
+  CommandAccountPermission(Check check) {
+    this.check = check;
   }
 
-  public boolean isNeedLoggedIn() {
-    return needLoggedIn;
+  public Check getCheck() {
+    return check;
   }
 
 }

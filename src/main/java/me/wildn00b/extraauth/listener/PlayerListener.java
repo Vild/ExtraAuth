@@ -213,7 +213,8 @@ public class PlayerListener implements Listener {
   @EventHandler(priority = EventPriority.MONITOR)
   public void onPlayerLogin(PlayerLoginEvent event) {
     if (event.getResult() == Result.ALLOWED && event.getPlayer() != null) {
-      extraauth.DB.Connecting(event.getPlayer(), event.getKickMessage());
+      extraauth.DB.Connecting(event.getPlayer(), event.getAddress()
+          .getHostAddress());
       event.getPlayer().sendMessage(
           ChatColor.YELLOW + "[ExtraAuth] " + ChatColor.GOLD
               + extraauth.Lang._("FreezeMessage"));

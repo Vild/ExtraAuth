@@ -57,15 +57,16 @@ public class AuthCommand implements CommandExecutor {
     try {
       if (args.length > 0) {
         if (args[0].equalsIgnoreCase("reload") && p(sender, "auth.reload")
-            && canUseCommand(sender, CommandAccountPermission.NO_ACCOUNT))
+            && canUseCommand(sender, CommandAccountPermission.LOGGED_IN))
           extraauth.Reload();
         else if (args[0].equalsIgnoreCase("disable")
             && p(sender, "auth.disable", false)
-            && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
+            && canUseCommand(sender,
+                CommandAccountPermission.GOT_ACCOUNT_AND_LOGGED_IN))
           Disable(sender);
         else if (args[0].equalsIgnoreCase("disableother")
             && p(sender, "auth.disableother", false)
-            && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
+            && canUseCommand(sender, CommandAccountPermission.LOGGED_IN))
           DisableOther(sender, args);
         else if (args[0].equalsIgnoreCase("help"))
           Help(sender, label, args);
@@ -73,10 +74,10 @@ public class AuthCommand implements CommandExecutor {
             && canUseCommand(sender, CommandAccountPermission.NO_ACCOUNT))
           Enable(sender, label, args);
         else if (args[0].equalsIgnoreCase("enableother")
-            && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
+            && canUseCommand(sender, CommandAccountPermission.LOGGED_IN))
           EnableOther(sender, label, args);
         else if (sender instanceof Player
-            && canUseCommand(sender, CommandAccountPermission.NEED_ACCOUNT))
+            && canUseCommand(sender, CommandAccountPermission.NOT_LOGGED_IN))
           Auth(sender, args);
         else
           ShowHelp(sender, label, 1);
@@ -141,11 +142,9 @@ public class AuthCommand implements CommandExecutor {
   }
 
   private boolean canUseCommand(CommandSender sender,
-      CommandAccountPermission needAccount) {
-    if (sender instanceof Player
-        && extraauth.DB.Contains(((Player) sender).getName())
-        && needAccount.isNeedAccount() && needAccount.isNeedLoggedIn())
-      return extraauth.DB.IsAuth((Player) sender);
+      CommandAccountPermission perms) {
+    if (sender instanceof Player)
+      return perms.getCheck().Run(((Player) sender).getName());
     else
       return true;
   }
@@ -365,7 +364,6 @@ public class AuthCommand implements CommandExecutor {
   }
 
   private void Help(CommandSender sender, String label, String[] args) {
-
     if (args.length > 1)
       ShowHelp(sender, label, Integer.parseInt(args[1]));
     else
@@ -393,16 +391,15 @@ public class AuthCommand implements CommandExecutor {
   private void ShowHelp(CommandSender sender, String label, int page) {
     final ArrayList<String> cmds = new ArrayList<String>();
 
-    if (canUseCommand(sender, CommandAccountPermission.NEED_ACCOUNT))
-      cmds.add(ChatColor.YELLOW
-          + "/"
-          + label
-          + " help "
-          + extraauth.Lang._("Command.Help").replaceFirst("- ",
-              ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
+    cmds.add(ChatColor.YELLOW
+        + "/"
+        + label
+        + " help "
+        + extraauth.Lang._("Command.Help").replaceFirst("- ",
+            ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
 
     if (p(sender, "tgym.reload")
-        && canUseCommand(sender, CommandAccountPermission.NO_ACCOUNT))
+        && canUseCommand(sender, CommandAccountPermission.LOGGED_IN))
       cmds.add(ChatColor.YELLOW
           + "/"
           + label
@@ -411,7 +408,8 @@ public class AuthCommand implements CommandExecutor {
               ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
 
     if (sender instanceof Player
-        && new PlayerInformation(sender.getName()).getExist())
+        && new PlayerInformation(sender.getName()).getExist()
+        && canUseCommand(sender, CommandAccountPermission.NOT_LOGGED_IN))
       cmds.add(ChatColor.YELLOW
           + "/"
           + label
@@ -424,7 +422,7 @@ public class AuthCommand implements CommandExecutor {
         final AuthMethod method = clazz.newInstance();
 
         if (p(sender, "tgym.enable." + method.GetName().toLowerCase(), false)
-            && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
+            && canUseCommand(sender, CommandAccountPermission.NO_ACCOUNT))
           cmds.add(ChatColor.YELLOW
               + "/"
               + label
@@ -438,7 +436,7 @@ public class AuthCommand implements CommandExecutor {
         if (p(sender, "tgym.enableother." + method.GetName().toLowerCase(),
             true)
             && method.AllowOtherToEnable()
-            && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
+            && canUseCommand(sender, CommandAccountPermission.LOGGED_IN))
           cmds.add(ChatColor.YELLOW
               + "/"
               + label
@@ -453,7 +451,8 @@ public class AuthCommand implements CommandExecutor {
       }
 
     if (p(sender, "tgym.disable", false)
-        && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
+        && canUseCommand(sender,
+            CommandAccountPermission.GOT_ACCOUNT_AND_LOGGED_IN))
       cmds.add(ChatColor.YELLOW
           + "/"
           + label
@@ -462,7 +461,7 @@ public class AuthCommand implements CommandExecutor {
               ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
 
     if (p(sender, "tgym.disableother")
-        && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
+        && canUseCommand(sender, CommandAccountPermission.LOGGED_IN))
       cmds.add(ChatColor.YELLOW
           + "/"
           + label
@@ -470,7 +469,7 @@ public class AuthCommand implements CommandExecutor {
           + extraauth.Lang._("Command.Disable.Other.Help").replaceFirst("- ",
               ChatColor.DARK_AQUA + "-" + ChatColor.GOLD + " "));
 
-    final int maxpage = 1 + cmds.size() / 6;
+    final int maxpage = 1 + (cmds.size() - 1) / 6;
     if (page < 1)
       page = 1;
     else if (page > maxpage)

@@ -55,6 +55,16 @@ public class Settings {
     return file.get(path);
   }
 
+  public double _D(String path, double value) {
+    final Object obj = _(path, value);
+    if (obj instanceof Double)
+      return (Double) obj;
+    else if (obj instanceof Integer)
+      return ((Integer) obj).doubleValue();
+    else
+      return value;
+  }
+
   public void Set(String path, Object value) {
     file.set(path, value);
     try {

@@ -162,18 +162,18 @@ public class PlayerStatusDB {
     if (Contains(player.getName())) {
       final playerstatus ps = Get(player.getName());
 
-      db.remove(ps);
+      extraauth.Log.log(Level.SEVERE, ""
+          + (System.currentTimeMillis() - ps.LastOnline) + "<"
+          + (extraauth.Settings._D("ReauthenticateTimeout", 5) * 1000 * 60));
+
       if (ps.LastIP != null
           && ps.LastIP.equalsIgnoreCase(IP)
-          && System.currentTimeMillis() - ps.LastOnline < (Integer) extraauth.Settings
-              ._("ReauthenticateTimeout", 5) * 1000 * 60) {
+          && (System.currentTimeMillis() - ps.LastOnline) < (extraauth.Settings
+              ._D("ReauthenticateTimeout", 5) * 1000 * 60))
         ps.Authed = true;
-        ps.LastIP = IP;
-      }
 
       db.add(ps);
-    } else
-      player.hidePlayer(player);
+    }
   }
 
   public boolean Contains(String name) {
@@ -190,6 +190,7 @@ public class PlayerStatusDB {
 
       ps.Authed = false;
       ps.LastOnline = System.currentTimeMillis();
+      ps.LastIP = player.getAddress().getAddress().getHostAddress();
 
       db.add(ps);
 

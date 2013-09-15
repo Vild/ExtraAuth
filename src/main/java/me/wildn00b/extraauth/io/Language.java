@@ -68,7 +68,7 @@ public class Language {
     list.put("FreezeMessage", "Please authenticate with /auth <KEY>");
     list.put("ExtraAuth.Enable", "Enabled successfully.");
     list.put("ExtraAuth.Disable", "Disabled successfully.");
-    list.put("ExtraAuth.Reload", "Reload ExtraAuth.");
+    list.put("ExtraAuth.Reload", "Reloaded ExtraAuth.");
     list.put("ExtraAuth.Saving", "Saving database.");
     list.put("ExtraAuth.CorruptDB", "Database corrupted.");
 
@@ -80,6 +80,7 @@ public class Language {
     list.put("Command.NoPlayer", "Couldn't find that player");
 
     list.put("Command.Help", "[page number] - Shows this help.");
+    list.put("Command.Reload", "- Reloads the ExtraAuth.");
     list.put(
         "Command.Enable.TOTP.Help",
         "- Enabling a TOTP authentication on your account. (Uses the Google Authenticator app)");
