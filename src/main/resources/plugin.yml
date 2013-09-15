@@ -19,8 +19,10 @@ permissions:
     default: op
     children:
       auth.reload: true
+      auth.enable.onetimekey: true
       auth.enable.key: true
       auth.enable.totp: true
+      auth.enableother.onetimekey: true
       auth.enableother.key: true
       auth.disable: true
       auth.disableother: true
