@@ -183,6 +183,70 @@ public class PlayerStatusDB {
     return false;
   }
 
+  private void ConvertOld() {
+    final File file = new File(extraauth.getDataFolder().getAbsolutePath()
+        + File.separator + "PlayerStatusDB.db");
+    new File(extraauth.getDataFolder().getAbsolutePath() + File.separator
+        + "PlayerStatusDB.db.bak");
+    playerstatus ps;
+    int method;
+    extraauth.Log.log(Level.WARNING, "ExtraAuth.Converting");
+
+    try {
+      final ObjectInputStream in = new ObjectInputStream(new FileInputStream(
+          file));
+      final int version = in.readInt();
+      if (version != 1)
+        throw new Exception("Invalid version");
+
+      final int size = in.readInt();
+      new HashMap<String, Tag>(size);
+
+      for (int i = 0; i < size; i++) {
+        ps = new playerstatus();
+        ps.Player = in.readUTF();
+        ps.Authed = in.readBoolean();
+        ps.LastOnline = in.readLong();
+        ps.LastIP = in.readUTF();
+        ps.PrivateKey = in.readUTF();
+
+        method = in.readInt();
+
+        if (method == 1)
+          ps.Method = AuthManager.GetAuthMethod("Key");
+        else if (method == 2)
+          ps.Method = AuthManager.GetAuthMethod("TOTP");
+        else
+          continue;
+
+        db.add(ps);
+      }
+
+      in.close();
+    } catch (final Exception e) {
+      extraauth.Log.log(Level.SEVERE, e.getMessage(), false);
+    }
+  }
+
+  private void copyFile(File sourceFile, File destFile) throws IOException {
+    if (!destFile.exists())
+      destFile.createNewFile();
+
+    FileChannel source = null;
+    FileChannel destination = null;
+
+    try {
+      source = new FileInputStream(sourceFile).getChannel();
+      destination = new FileOutputStream(destFile).getChannel();
+      destination.transferFrom(source, 0, source.size());
+    } finally {
+      if (source != null)
+        source.close();
+      if (destination != null)
+        destination.close();
+    }
+  }
+
   public void Disconnect(Player player) {
     if (Contains(player.getName())) {
       final playerstatus ps = Get(player.getName());
@@ -272,70 +336,6 @@ public class PlayerStatusDB {
       out.close();
     } catch (final Exception e) {
       e.printStackTrace();
-    }
-  }
-
-  private void ConvertOld() {
-    final File file = new File(extraauth.getDataFolder().getAbsolutePath()
-        + File.separator + "PlayerStatusDB.db");
-    new File(extraauth.getDataFolder().getAbsolutePath() + File.separator
-        + "PlayerStatusDB.db.bak");
-    playerstatus ps;
-    int method;
-    extraauth.Log.log(Level.WARNING, "ExtraAuth.Converting");
-
-    try {
-      final ObjectInputStream in = new ObjectInputStream(new FileInputStream(
-          file));
-      final int version = in.readInt();
-      if (version != 1)
-        throw new Exception("Invalid version");
-
-      final int size = in.readInt();
-      new HashMap<String, Tag>(size);
-
-      for (int i = 0; i < size; i++) {
-        ps = new playerstatus();
-        ps.Player = in.readUTF();
-        ps.Authed = in.readBoolean();
-        ps.LastOnline = in.readLong();
-        ps.LastIP = in.readUTF();
-        ps.PrivateKey = in.readUTF();
-
-        method = in.readInt();
-
-        if (method == 1)
-          ps.Method = AuthManager.GetAuthMethod("Key");
-        else if (method == 2)
-          ps.Method = AuthManager.GetAuthMethod("TOTP");
-        else
-          continue;
-
-        db.add(ps);
-      }
-
-      in.close();
-    } catch (final Exception e) {
-      extraauth.Log.log(Level.SEVERE, e.getMessage(), false);
-    }
-  }
-
-  private void copyFile(File sourceFile, File destFile) throws IOException {
-    if (!destFile.exists())
-      destFile.createNewFile();
-
-    FileChannel source = null;
-    FileChannel destination = null;
-
-    try {
-      source = new FileInputStream(sourceFile).getChannel();
-      destination = new FileOutputStream(destFile).getChannel();
-      destination.transferFrom(source, 0, source.size());
-    } finally {
-      if (source != null)
-        source.close();
-      if (destination != null)
-        destination.close();
     }
   }
 

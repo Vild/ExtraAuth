@@ -55,14 +55,6 @@ public class Settings {
     return file.get(path);
   }
 
-  public void Set(String path, Object value) {
-    file.set(path, value);
-    try {
-      file.save(path);
-    } catch (final IOException e) {
-    }
-  }
-
   private void addDefaults() {
     final HashMap<String, Object> list = new HashMap<String, Object>();
 
@@ -76,6 +68,14 @@ public class Settings {
     for (final Entry<String, Object> entry : list.entrySet())
       if (!file.contains(entry.getKey()))
         file.set(entry.getKey(), entry.getValue());
+  }
+
+  public void Set(String path, Object value) {
+    file.set(path, value);
+    try {
+      file.save(path);
+    } catch (final IOException e) {
+    }
   }
 
 }

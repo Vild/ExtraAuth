@@ -53,9 +53,9 @@ public class ClassProxy {
   }
 
   private static class PoolList extends ArrayList<byte[]> {
+    final HashMap<Class, Integer> _classMap = new HashMap<Class, Integer>();
     private final HashMap<String, Integer> _map = new HashMap<String, Integer>();
     private final HashMap<Method, Integer> _methodMap = new HashMap<Method, Integer>();
-    final HashMap<Class, Integer> _classMap = new HashMap<Class, Integer>();
 
     public void addString(String str) {
       if (!_map.containsKey(str)) {
@@ -178,7 +178,11 @@ public class ClassProxy {
     _fromObjectMap = Collections.unmodifiableMap(fromMap);
   }
 
-  private ClassProxy() {
+  private static byte[] b(int... array) {
+    final byte[] b = new byte[array.length];
+    for (int i = 0; i < array.length; i++)
+      b[i] = (byte) array[i];
+    return b;
   }
 
   /**
@@ -213,160 +217,6 @@ public class ClassProxy {
       final Throwable t = e.getCause();
       throw (t == null) ? e : t;
     }
-  }
-
-  /**
-   * <p>
-   * Creates a proxy class for a given super class.
-   * </p>
-   * <p>
-   * Creates a new {@link Class} which extends a given super class which redirects all calls to public and protected methods which are non-final and non-static to a given {@link InvocationHandler}.<br />
-   * Abstract methods will be defined and redirected to the InvocationHandler as well.<br />
-   * For every public and protected constructor the super class has, this class will have the same constructor with an InvocationHandler as additional first parameter.
-   * </p>
-   * 
-   * @param superClass
-   *          The class on which you wish to create a proxy. Has to be public and not final, primitive, an array or an interface.
-   * @param createIfNotExists
-   *          Whether or not to create a proxy class if none exists.
-   * 
-   * @return The new class.
-   * 
-   * @throws IllegalArgumentException
-   *           If {@code createIfNotExists} is {@code true}, the class does not exist yet and no valid bytecode can be generated.
-   */
-  public static Class getClass(Class superClass, boolean createIfNotExists)
-      throws IllegalArgumentException {
-    return getClass(superClass, null, createIfNotExists);
-  }
-
-  /**
-   * <p>
-   * Creates a proxy class for a given super class.
-   * </p>
-   * <p>
-   * Creates a new {@link Class} which extends a given super class which redirects all calls to public and protected methods which are non-final and non-static, on which {@code filter.filterMethod()}
-   * returns {@code true}, to a given {@link InvocationHandler}.<br />
-   * Abstract methods will be defined and redirected to the InvocationHandler as well.<br />
-   * For every public and protected constructor the super class has, this class will have the same constructor with an InvocationHandler as additional first parameter.
-   * </p>
-   * 
-   * @param superClass
-   *          The class on which you wish to create a proxy. Has to be public and not final, primitive, an array or an interface.
-   * @param filter
-   *          The {@link MethodFilter} to use on {@code superClass}.
-   * @param createIfNotExists
-   *          Whether or not to create a proxy class if none exists.
-   * 
-   * @return The new class.
-   * 
-   * @throws IllegalArgumentException
-   *           If {@code createIfNotExists} is {@code true}, the class does not exist yet and no valid bytecode can be generated.
-   */
-  public static synchronized Class getClass(Class superClass,
-      MethodFilter filter, boolean createIfNotExists)
-      throws IllegalArgumentException {
-    if (superClass.isInterface() || superClass.isAnnotation())
-      throw new IllegalArgumentException("No interfaces allowed!");
-    if (superClass.isArray())
-      throw new IllegalArgumentException("No arrays allowed!");
-    if (superClass.isPrimitive())
-      throw new IllegalArgumentException("No primitive types allowed!");
-    if ((superClass.getModifiers() & Modifier.PUBLIC) != Modifier.PUBLIC)
-      throw new IllegalArgumentException("superClass not public!");
-    final Method[] mthd = getMethods(superClass, filter);
-    final ProxyDescriptor desc = new ProxyDescriptor(superClass, mthd);
-    if (_map.containsKey(desc))
-      return _map.get(desc);
-    if (!createIfNotExists)
-      return null;
-    try {
-      final Class clazz = defineClass(superClass, mthd);
-      _map.put(desc, clazz);
-      _methodTables.put(clazz, mthd);
-      return clazz;
-    } catch (final Throwable t) {
-      throw new IllegalArgumentException(t);
-    }
-  }
-
-  /**
-   * <p>
-   * Creates a proxy class for a given super class and instantiates it.
-   * </p>
-   * <p>
-   * This basically just calls {@code newInstance(superClass, null, handler, paramTypes, params)}.
-   * </p>
-   * 
-   * @param superClass
-   *          The class on which you wish to create a proxy.
-   * @param handler
-   *          The {@link InvocationHandler} to which public and protected method calls will be redirected.
-   * @param paramTypes
-   *          An array of {@link Class Classes} to identify the constructor of the super class you wish to invoke.
-   * @param params
-   *          An array or arguments to pass to the constructor of the super class.
-   * 
-   * @return An new proxy instance.
-   * 
-   * @throws IllegalArgumentException
-   *           If the proxy class has not yet been created: See {@link #getClass(Class, boolean) getClass()}.
-   */
-  public static <T> T newInstance(Class<T> superClass,
-      InvocationHandler handler, Class[] paramTypes, Object... params)
-      throws IllegalArgumentException {
-    return newInstance(superClass, null, handler, paramTypes, params);
-  }
-
-  /**
-   * <p>
-   * Creates a proxy class for a given super class and instantiates it.
-   * </p>
-   * 
-   * @param superClass
-   *          The class on which you wish to create a proxy.
-   * @param filter
-   *          The {@link MethodFilter} to use on {@code superClass}.
-   * @param handler
-   *          The {@link InvocationHandler} to which public and protected method calls will be redirected.
-   * @param paramTypes
-   *          An array of {@link Class Classes} to identify the constructor of the super class you wish to invoke.
-   * @param params
-   *          An array or arguments to pass to the constructor of the super class.
-   * 
-   * @return An new proxy instance.
-   * 
-   * @throws IllegalArgumentException
-   *           If the proxy class has not yet been created: See {@link #getClass(Class, boolean) getClass()}.
-   */
-  public static <T> T newInstance(Class<T> superClass, MethodFilter filter,
-      InvocationHandler handler, Class[] paramTypes, Object... params)
-      throws IllegalArgumentException {
-    try {
-      final Class[] types0 = new Class[paramTypes.length + 1];
-      types0[0] = InvocationHandler.class;
-      for (int i = 0; i < paramTypes.length; i++)
-        types0[i + 1] = paramTypes[i];
-      final Object[] params0 = new Object[params.length + 1];
-      params0[0] = handler;
-      for (int i = 0; i < params.length; i++)
-        params0[i + 1] = params[i];
-      final Constructor c = getClass(superClass, filter, true)
-          .getDeclaredConstructor(types0);
-      c.setAccessible(true);
-      return (T) c.newInstance(params0);
-    } catch (final IllegalArgumentException e) {
-      throw e;
-    } catch (final Throwable t) {
-      throw new IllegalArgumentException(t);
-    }
-  }
-
-  private static byte[] b(int... array) {
-    final byte[] b = new byte[array.length];
-    for (int i = 0; i < array.length; i++)
-      b[i] = (byte) array[i];
-    return b;
   }
 
   private static synchronized byte[] compileClass(Class superClass,
@@ -706,6 +556,81 @@ public class ClassProxy {
     }
   }
 
+  /**
+   * <p>
+   * Creates a proxy class for a given super class.
+   * </p>
+   * <p>
+   * Creates a new {@link Class} which extends a given super class which redirects all calls to public and protected methods which are non-final and non-static to a given {@link InvocationHandler}.<br />
+   * Abstract methods will be defined and redirected to the InvocationHandler as well.<br />
+   * For every public and protected constructor the super class has, this class will have the same constructor with an InvocationHandler as additional first parameter.
+   * </p>
+   * 
+   * @param superClass
+   *          The class on which you wish to create a proxy. Has to be public and not final, primitive, an array or an interface.
+   * @param createIfNotExists
+   *          Whether or not to create a proxy class if none exists.
+   * 
+   * @return The new class.
+   * 
+   * @throws IllegalArgumentException
+   *           If {@code createIfNotExists} is {@code true}, the class does not exist yet and no valid bytecode can be generated.
+   */
+  public static Class getClass(Class superClass, boolean createIfNotExists)
+      throws IllegalArgumentException {
+    return getClass(superClass, null, createIfNotExists);
+  }
+
+  /**
+   * <p>
+   * Creates a proxy class for a given super class.
+   * </p>
+   * <p>
+   * Creates a new {@link Class} which extends a given super class which redirects all calls to public and protected methods which are non-final and non-static, on which {@code filter.filterMethod()}
+   * returns {@code true}, to a given {@link InvocationHandler}.<br />
+   * Abstract methods will be defined and redirected to the InvocationHandler as well.<br />
+   * For every public and protected constructor the super class has, this class will have the same constructor with an InvocationHandler as additional first parameter.
+   * </p>
+   * 
+   * @param superClass
+   *          The class on which you wish to create a proxy. Has to be public and not final, primitive, an array or an interface.
+   * @param filter
+   *          The {@link MethodFilter} to use on {@code superClass}.
+   * @param createIfNotExists
+   *          Whether or not to create a proxy class if none exists.
+   * 
+   * @return The new class.
+   * 
+   * @throws IllegalArgumentException
+   *           If {@code createIfNotExists} is {@code true}, the class does not exist yet and no valid bytecode can be generated.
+   */
+  public static synchronized Class getClass(Class superClass,
+      MethodFilter filter, boolean createIfNotExists)
+      throws IllegalArgumentException {
+    if (superClass.isInterface() || superClass.isAnnotation())
+      throw new IllegalArgumentException("No interfaces allowed!");
+    if (superClass.isArray())
+      throw new IllegalArgumentException("No arrays allowed!");
+    if (superClass.isPrimitive())
+      throw new IllegalArgumentException("No primitive types allowed!");
+    if ((superClass.getModifiers() & Modifier.PUBLIC) != Modifier.PUBLIC)
+      throw new IllegalArgumentException("superClass not public!");
+    final Method[] mthd = getMethods(superClass, filter);
+    final ProxyDescriptor desc = new ProxyDescriptor(superClass, mthd);
+    if (_map.containsKey(desc))
+      return _map.get(desc);
+    if (!createIfNotExists)
+      return null;
+    try {
+      final Class clazz = defineClass(superClass, mthd);
+      _map.put(desc, clazz);
+      _methodTables.put(clazz, mthd);
+      return clazz;
+    } catch (final Throwable t) {
+      throw new IllegalArgumentException(t);
+    }
+  }
+
   private static Constructor[] getConstructors(Class clazz) {
     final ArrayList<Constructor> list = new ArrayList<Constructor>();
     for (final Constructor c : clazz.getDeclaredConstructors()) {
@@ -755,6 +680,11 @@ public class ClassProxy {
     for (final Class clazz : m.getParameterTypes())
       sig += getType(clazz);
     return sig + ")" + getType(m.getReturnType());
+  }
+
+  static Method[] getMethodTable(Class proxy) {
+    return _methodTables.containsKey(proxy) ? _methodTables.get(proxy)
+        : new Method[0];
   }
 
   private static String getName(Class clazz) {
@@ -817,6 +747,78 @@ public class ClassProxy {
     return name;
   }
 
+  /**
+   * <p>
+   * Creates a proxy class for a given super class and instantiates it.
+   * </p>
+   * <p>
+   * This basically just calls {@code newInstance(superClass, null, handler, paramTypes, params)}.
+   * </p>
+   * 
+   * @param superClass
+   *          The class on which you wish to create a proxy.
+   * @param handler
+   *          The {@link InvocationHandler} to which public and protected method calls will be redirected.
+   * @param paramTypes
+   *          An array of {@link Class Classes} to identify the constructor of the super class you wish to invoke.
+   * @param params
+   *          An array or arguments to pass to the constructor of the super class.
+   * 
+   * @return An new proxy instance.
+   * 
+   * @throws IllegalArgumentException
+   *           If the proxy class has not yet been created: See {@link #getClass(Class, boolean) getClass()}.
+   */
+  public static <T> T newInstance(Class<T> superClass,
+      InvocationHandler handler, Class[] paramTypes, Object... params)
+      throws IllegalArgumentException {
+    return newInstance(superClass, null, handler, paramTypes, params);
+  }
+
+  /**
+   * <p>
+   * Creates a proxy class for a given super class and instantiates it.
+   * </p>
+   * 
+   * @param superClass
+   *          The class on which you wish to create a proxy.
+   * @param filter
+   *          The {@link MethodFilter} to use on {@code superClass}.
+   * @param handler
+   *          The {@link InvocationHandler} to which public and protected method calls will be redirected.
+   * @param paramTypes
+   *          An array of {@link Class Classes} to identify the constructor of the super class you wish to invoke.
+   * @param params
+   *          An array or arguments to pass to the constructor of the super class.
+   * 
+   * @return An new proxy instance.
+   * 
+   * @throws IllegalArgumentException
+   *           If the proxy class has not yet been created: See {@link #getClass(Class, boolean) getClass()}.
+   */
+  public static <T> T newInstance(Class<T> superClass, MethodFilter filter,
+      InvocationHandler handler, Class[] paramTypes, Object... params)
+      throws IllegalArgumentException {
+    try {
+      final Class[] types0 = new Class[paramTypes.length + 1];
+      types0[0] = InvocationHandler.class;
+      for (int i = 0; i < paramTypes.length; i++)
+        types0[i + 1] = paramTypes[i];
+      final Object[] params0 = new Object[params.length + 1];
+      params0[0] = handler;
+      for (int i = 0; i < params.length; i++)
+        params0[i + 1] = params[i];
+      final Constructor c = getClass(superClass, filter, true)
+          .getDeclaredConstructor(types0);
+      c.setAccessible(true);
+      return (T) c.newInstance(params0);
+    } catch (final IllegalArgumentException e) {
+      throw e;
+    } catch (final Throwable t) {
+      throw new IllegalArgumentException(t);
+    }
+  }
+
   private static int numMethod(Class clazz, Method m)
       throws IllegalArgumentException {
     try {
@@ -831,6 +833,23 @@ public class ClassProxy {
       throw e;
     }
     throw new IllegalArgumentException("Method " + m.getName() + " not found!");
+  }
+
+  static Object redirect(Object proxy, InvocationHandler handler, Method m,
+      Object... args) throws Throwable {
+    try {
+      return handler.invoke(proxy, m, args);
+    } catch (final Throwable t) {
+      if (t == null)
+        throw new Exception(
+            "An exception was here, but apparently it decided to go away.");
+      if ((t instanceof RuntimeException) || (t instanceof Error))
+        throw t;
+      for (final Class c : m.getExceptionTypes())
+        if (c.isInstance(t))
+          throw t;
+      throw new UndeclaredThrowableException(t);
+    }
   }
 
   private static byte[] smartInt(int i) {
@@ -864,25 +883,6 @@ public class ClassProxy {
     return b;
   }
 
-  static Method[] getMethodTable(Class proxy) {
-    return _methodTables.containsKey(proxy) ? _methodTables.get(proxy)
-        : new Method[0];
-  }
-
-  static Object redirect(Object proxy, InvocationHandler handler, Method m,
-      Object... args) throws Throwable {
-    try {
-      return handler.invoke(proxy, m, args);
-    } catch (final Throwable t) {
-      if (t == null)
-        throw new Exception(
-            "An exception was here, but apparently it decided to go away.");
-      if ((t instanceof RuntimeException) || (t instanceof Error))
-        throw t;
-      for (final Class c : m.getExceptionTypes())
-        if (c.isInstance(t))
-          throw t;
-      throw new UndeclaredThrowableException(t);
-    }
+  private ClassProxy() {
   }
 }

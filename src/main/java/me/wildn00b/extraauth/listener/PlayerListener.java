@@ -52,9 +52,9 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 
 public class PlayerListener implements Listener {
 
-  public HashMap<UUID, Long> messageTimeout = new HashMap<UUID, Long>();
-
   private final ExtraAuth extraauth;
+
+  public HashMap<UUID, Long> messageTimeout = new HashMap<UUID, Long>();
 
   public PlayerListener(ExtraAuth extraauth) {
     this.extraauth = extraauth;
@@ -172,7 +172,8 @@ public class PlayerListener implements Listener {
 
   @EventHandler(priority = EventPriority.HIGHEST)
   public void onEntityTarget(EntityTargetEvent event) {
-    if (event.getTarget().getType() == EntityType.PLAYER) {
+    if (event.getTarget() != null
+        && event.getTarget().getType() == EntityType.PLAYER) {
       final Player player = (Player) event.getTarget();
       if (isFrozen(player) && (!event.isCancelled()))
         event.setCancelled(true);

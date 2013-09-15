@@ -16,32 +16,6 @@ import java.util.Map;
  * </p>
  */
 public final class Tag<T> {
-  private final T _data;
-  private final NBT _type;
-
-  private Tag(NBT type, T data) {
-    _type = type;
-    _data = data;
-  }
-
-  /**
-   * Returns the value of this {@link Tag}.
-   * 
-   * @return The value.
-   */
-  public T get() {
-    return _data;
-  }
-
-  /**
-   * Returns an {@link NBT} representing the type of this {@link Tag}.
-   * 
-   * @return An enum representing the type of this {@link Tag}.
-   */
-  public NBT getType() {
-    return _type;
-  }
-
   /**
    * Creates a new byte tag.
    * 
@@ -252,5 +226,32 @@ public final class Tag<T> {
       return NBT.NBTToTag(o);
     else
       throw new UnknownTagException();
+  }
+
+  private final T _data;
+
+  private final NBT _type;
+
+  private Tag(NBT type, T data) {
+    _type = type;
+    _data = data;
+  }
+
+  /**
+   * Returns the value of this {@link Tag}.
+   * 
+   * @return The value.
+   */
+  public T get() {
+    return _data;
+  }
+
+  /**
+   * Returns an {@link NBT} representing the type of this {@link Tag}.
+   * 
+   * @return An enum representing the type of this {@link Tag}.
+   */
+  public NBT getType() {
+    return _type;
   }
 }

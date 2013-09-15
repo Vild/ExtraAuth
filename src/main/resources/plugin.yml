@@ -1,5 +1,5 @@
 name: ExtraAuth
-version: 1.2.0
+version: 1.2.3
 description: Use Google Authenticator to authenticate to your server.
 author: WildN00b
 authors: [WildN00b]
