@@ -28,19 +28,19 @@ import org.bukkit.Bukkit;
  * </p>
  */
 public class NBTLib {
-  private static String _craftbukkit;
-
-  private static boolean _disabled;
-
   /**
    * Just the console.
    */
   public static final Logger _log;
-  private static String _minecraft;
+
   /**
    * Just the NBTLib version.
    */
   public static final String _version = "#VERSION#";
+
+  private static String _craftbukkit;
+  private static boolean _disabled;
+  private static String _minecraft;
   static {
     _log = Logger.getLogger("Minecraft");
     try {
@@ -50,31 +50,6 @@ public class NBTLib {
     } catch (final Throwable t) {
     }
     clinit();
-  }
-
-  private static void clinit() {
-    _disabled = true;
-    final ArrayList<Package> list = new ArrayList<Package>();
-    for (final Package p : Package.getPackages())
-      if (p.getName().startsWith("net.minecraft.server"))
-        list.add(p);
-    if (list.size() == 1) {
-      _minecraft = list.get(0).getName();
-      _craftbukkit = "org.bukkit.craftbukkit" + _minecraft.substring(20);
-      if (Package.getPackage(_craftbukkit) == null)
-        _log.severe("[NBTLib] Can't find Craftbukkit package! (" + _minecraft
-            + "/" + _craftbukkit + ")");
-      else {
-        _minecraft += ".";
-        _craftbukkit += ".";
-        _disabled = false;
-      }
-    } else {
-      _log.severe("[NBTLib] Can't find Minecraft package! " + list.size()
-          + " possible packages found:");
-      for (final Package p : list.toArray(new Package[0]))
-        _log.severe("[NBTLib] " + p.getName());
-    }
   }
 
   /**
@@ -910,5 +885,30 @@ public class NBTLib {
       String name, Object value) throws ClassNotFoundException,
       IllegalAccessException, NoSuchFieldException, NBTLibDisabledException {
     putField(getMinecraftPackage() + className, object, name, value);
+  }
+
+  private static void clinit() {
+    _disabled = true;
+    final ArrayList<Package> list = new ArrayList<Package>();
+    for (final Package p : Package.getPackages())
+      if (p.getName().startsWith("net.minecraft.server"))
+        list.add(p);
+    if (list.size() == 1) {
+      _minecraft = list.get(0).getName();
+      _craftbukkit = "org.bukkit.craftbukkit" + _minecraft.substring(20);
+      if (Package.getPackage(_craftbukkit) == null)
+        _log.severe("[NBTLib] Can't find Craftbukkit package! (" + _minecraft
+            + "/" + _craftbukkit + ")");
+      else {
+        _minecraft += ".";
+        _craftbukkit += ".";
+        _disabled = false;
+      }
+    } else {
+      _log.severe("[NBTLib] Can't find Minecraft package! " + list.size()
+          + " possible packages found:");
+      for (final Package p : list.toArray(new Package[0]))
+        _log.severe("[NBTLib] " + p.getName());
+    }
   }
 }

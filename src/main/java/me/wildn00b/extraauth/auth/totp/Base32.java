@@ -45,18 +45,6 @@ public class Base32 {
 
   static final String SEPARATOR = "-";
 
-  public static byte[] decode(String encoded) throws DecodingException {
-    return getInstance().decodeInternal(encoded);
-  }
-
-  public static String encode(byte[] data) {
-    return getInstance().encodeInternal(data);
-  }
-
-  static Base32 getInstance() {
-    return INSTANCE;
-  }
-
   // 32 alpha-numeric characters.
   private final String ALPHABET;
 
@@ -156,5 +144,17 @@ public class Base32 {
       result.append(DIGITS[index]);
     }
     return result.toString();
+  }
+
+  public static byte[] decode(String encoded) throws DecodingException {
+    return getInstance().decodeInternal(encoded);
+  }
+
+  public static String encode(byte[] data) {
+    return getInstance().encodeInternal(data);
+  }
+
+  static Base32 getInstance() {
+    return INSTANCE;
   }
 }

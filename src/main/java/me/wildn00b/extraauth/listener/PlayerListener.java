@@ -52,9 +52,9 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 
 public class PlayerListener implements Listener {
 
-  private final ExtraAuth extraauth;
-
   public HashMap<UUID, Long> messageTimeout = new HashMap<UUID, Long>();
+
+  private final ExtraAuth extraauth;
 
   public PlayerListener(ExtraAuth extraauth) {
     this.extraauth = extraauth;

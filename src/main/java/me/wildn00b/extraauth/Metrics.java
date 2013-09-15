@@ -124,12 +124,6 @@ public class Metrics {
     }
 
     /**
-     * Called when the server owner decides to opt-out of BukkitMetrics while the server is running.
-     */
-    protected void onOptOut() {
-    }
-
-    /**
      * Remove a plotter from the graph
      * 
      * @param plotter
@@ -137,6 +131,12 @@ public class Metrics {
      */
     public void removePlotter(final Plotter plotter) {
       plotters.remove(plotter);
+    }
+
+    /**
+     * Called when the server owner decides to opt-out of BukkitMetrics while the server is running.
+     */
+    protected void onOptOut() {
     }
   }
 
@@ -224,120 +224,6 @@ public class Metrics {
    * The current revision number
    */
   private final static int REVISION = 7;
-
-  /**
-   * Appends a json encoded key/value pair to the given string builder.
-   * 
-   * @param json
-   * @param key
-   * @param value
-   * @throws UnsupportedEncodingException
-   */
-  private static void appendJSONPair(StringBuilder json, String key,
-      String value) throws UnsupportedEncodingException {
-    boolean isValueNumeric;
-
-    try {
-      Double.parseDouble(value);
-      isValueNumeric = true;
-    } catch (final NumberFormatException e) {
-      isValueNumeric = false;
-    }
-
-    if (json.charAt(json.length() - 1) != '{')
-      json.append(',');
-
-    json.append(escapeJSON(key));
-    json.append(':');
-
-    if (isValueNumeric)
-      json.append(value);
-    else
-      json.append(escapeJSON(value));
-  }
-
-  /**
-   * Escape a string to create a valid JSON string
-   * 
-   * @param text
-   * @return
-   */
-  private static String escapeJSON(String text) {
-    final StringBuilder builder = new StringBuilder();
-
-    builder.append('"');
-    for (int index = 0; index < text.length(); index++) {
-      final char chr = text.charAt(index);
-
-      switch (chr) {
-      case '"':
-      case '\\':
-        builder.append('\\');
-        builder.append(chr);
-        break;
-      case '\b':
-        builder.append("\\b");
-        break;
-      case '\t':
-        builder.append("\\t");
-        break;
-      case '\n':
-        builder.append("\\n");
-        break;
-      case '\r':
-        builder.append("\\r");
-        break;
-      default:
-        if (chr < ' ') {
-          final String t = "000" + Integer.toHexString(chr);
-          builder.append("\\u" + t.substring(t.length() - 4));
-        } else
-          builder.append(chr);
-        break;
-      }
-    }
-    builder.append('"');
-
-    return builder.toString();
-  }
-
-  /**
-   * GZip compress a string of bytes
-   * 
-   * @param input
-   * @return
-   */
-  public static byte[] gzip(String input) {
-    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    GZIPOutputStream gzos = null;
-
-    try {
-      gzos = new GZIPOutputStream(baos);
-      gzos.write(input.getBytes("UTF-8"));
-    } catch (final IOException e) {
-      e.printStackTrace();
-    } finally {
-      if (gzos != null)
-        try {
-          gzos.close();
-        } catch (final IOException ignore) {
-        }
-    }
-
-    return baos.toByteArray();
-  }
-
-  /**
-   * Encode text as UTF-8
-   * 
-   * @param text
-   *          the text to encode
-   * @return the encoded text, as UTF-8
-   */
-  private static String urlEncode(final String text)
-      throws UnsupportedEncodingException {
-    return URLEncoder.encode(text, "UTF-8");
-  }
 
   /**
    * The plugin configuration file
@@ -547,20 +433,6 @@ public class Metrics {
   }
 
   /**
-   * Check if mineshafter is present. If it is, we need to bypass it to send POST requests
-   * 
-   * @return true if mineshafter is installed on the server
-   */
-  private boolean isMineshafterPresent() {
-    try {
-      Class.forName("mineshafter.MineServer");
-      return true;
-    } catch (final Exception e) {
-      return false;
-    }
-  }
-
-  /**
    * Has the server owner denied plugin metrics?
    * 
    * @return true if metrics should be opted out of it
@@ -580,6 +452,77 @@ public class Metrics {
         return true;
       }
       return configuration.getBoolean("opt-out", false);
+    }
+  }
+
+  /**
+   * Start measuring statistics. This will immediately create an async repeating task as the plugin and send the initial data to the metrics backend, and then after that it will post in increments of
+   * PING_INTERVAL * 1200 ticks.
+   * 
+   * @return True if statistics measuring is running, otherwise false.
+   */
+  public boolean start() {
+    synchronized (optOutLock) {
+      // Did we opt out?
+      if (isOptOut())
+        return false;
+
+      // Is metrics already running?
+      if (task != null)
+        return true;
+
+      // Begin hitting the server with glorious data
+      task = plugin.getServer().getScheduler()
+          .runTaskTimerAsynchronously(plugin, new Runnable() {
+
+            private boolean firstPost = true;
+
+            @Override
+            public void run() {
+              try {
+                // This has to be synchronized or it can collide with the disable method.
+                synchronized (optOutLock) {
+                  // Disable Task, if it is running and the server owner decided to opt-out
+                  if (isOptOut() && task != null) {
+                    task.cancel();
+                    task = null;
+                    // Tell all plotters to stop gathering information.
+                    for (final Graph graph : graphs)
+                      graph.onOptOut();
+                  }
+                }
+
+                // We use the inverse of firstPost because if it is the first time we are posting,
+                // it is not a interval ping, so it evaluates to FALSE
+                // Each time thereafter it will evaluate to TRUE, i.e PING!
+                postPlugin(!firstPost);
+
+                // After the first post we set firstPost to false
+                // Each post thereafter will be a ping
+                firstPost = false;
+              } catch (final IOException e) {
+                if (debug)
+                  Bukkit.getLogger().log(Level.INFO,
+                      "[Metrics] " + e.getMessage());
+              }
+            }
+          }, 0, PING_INTERVAL * 1200);
+
+      return true;
+    }
+  }
+
+  /**
+   * Check if mineshafter is present. If it is, we need to bypass it to send POST requests
+   * 
+   * @return true if mineshafter is installed on the server
+   */
+  private boolean isMineshafterPresent() {
+    try {
+      Class.forName("mineshafter.MineServer");
+      return true;
+    } catch (final Exception e) {
+      return false;
     }
   }
 
@@ -741,59 +684,116 @@ public class Metrics {
   }
 
   /**
-   * Start measuring statistics. This will immediately create an async repeating task as the plugin and send the initial data to the metrics backend, and then after that it will post in increments of
-   * PING_INTERVAL * 1200 ticks.
+   * GZip compress a string of bytes
    * 
-   * @return True if statistics measuring is running, otherwise false.
+   * @param input
+   * @return
    */
-  public boolean start() {
-    synchronized (optOutLock) {
-      // Did we opt out?
-      if (isOptOut())
-        return false;
+  public static byte[] gzip(String input) {
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    GZIPOutputStream gzos = null;
 
-      // Is metrics already running?
-      if (task != null)
-        return true;
-
-      // Begin hitting the server with glorious data
-      task = plugin.getServer().getScheduler()
-          .runTaskTimerAsynchronously(plugin, new Runnable() {
-
-            private boolean firstPost = true;
-
-            @Override
-            public void run() {
-              try {
-                // This has to be synchronized or it can collide with the disable method.
-                synchronized (optOutLock) {
-                  // Disable Task, if it is running and the server owner decided to opt-out
-                  if (isOptOut() && task != null) {
-                    task.cancel();
-                    task = null;
-                    // Tell all plotters to stop gathering information.
-                    for (final Graph graph : graphs)
-                      graph.onOptOut();
-                  }
-                }
-
-                // We use the inverse of firstPost because if it is the first time we are posting,
-                // it is not a interval ping, so it evaluates to FALSE
-                // Each time thereafter it will evaluate to TRUE, i.e PING!
-                postPlugin(!firstPost);
-
-                // After the first post we set firstPost to false
-                // Each post thereafter will be a ping
-                firstPost = false;
-              } catch (final IOException e) {
-                if (debug)
-                  Bukkit.getLogger().log(Level.INFO,
-                      "[Metrics] " + e.getMessage());
-              }
-            }
-          }, 0, PING_INTERVAL * 1200);
-
-      return true;
+    try {
+      gzos = new GZIPOutputStream(baos);
+      gzos.write(input.getBytes("UTF-8"));
+    } catch (final IOException e) {
+      e.printStackTrace();
+    } finally {
+      if (gzos != null)
+        try {
+          gzos.close();
+        } catch (final IOException ignore) {
+        }
     }
+
+    return baos.toByteArray();
+  }
+
+  /**
+   * Appends a json encoded key/value pair to the given string builder.
+   * 
+   * @param json
+   * @param key
+   * @param value
+   * @throws UnsupportedEncodingException
+   */
+  private static void appendJSONPair(StringBuilder json, String key,
+      String value) throws UnsupportedEncodingException {
+    boolean isValueNumeric;
+
+    try {
+      Double.parseDouble(value);
+      isValueNumeric = true;
+    } catch (final NumberFormatException e) {
+      isValueNumeric = false;
+    }
+
+    if (json.charAt(json.length() - 1) != '{')
+      json.append(',');
+
+    json.append(escapeJSON(key));
+    json.append(':');
+
+    if (isValueNumeric)
+      json.append(value);
+    else
+      json.append(escapeJSON(value));
+  }
+
+  /**
+   * Escape a string to create a valid JSON string
+   * 
+   * @param text
+   * @return
+   */
+  private static String escapeJSON(String text) {
+    final StringBuilder builder = new StringBuilder();
+
+    builder.append('"');
+    for (int index = 0; index < text.length(); index++) {
+      final char chr = text.charAt(index);
+
+      switch (chr) {
+      case '"':
+      case '\\':
+        builder.append('\\');
+        builder.append(chr);
+        break;
+      case '\b':
+        builder.append("\\b");
+        break;
+      case '\t':
+        builder.append("\\t");
+        break;
+      case '\n':
+        builder.append("\\n");
+        break;
+      case '\r':
+        builder.append("\\r");
+        break;
+      default:
+        if (chr < ' ') {
+          final String t = "000" + Integer.toHexString(chr);
+          builder.append("\\u" + t.substring(t.length() - 4));
+        } else
+          builder.append(chr);
+        break;
+      }
+    }
+    builder.append('"');
+
+    return builder.toString();
+  }
+
+  /**
+   * Encode text as UTF-8
+   * 
+   * @param text
+   *          the text to encode
+   * @return the encoded text, as UTF-8
+   */
+  private static String urlEncode(final String text)
+      throws UnsupportedEncodingException {
+    return URLEncoder.encode(text, "UTF-8");
   }
 }

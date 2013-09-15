@@ -51,6 +51,47 @@ public class AuthCommand implements CommandExecutor {
     this.extraauth = extraauth;
   }
 
+  @Override
+  public boolean onCommand(CommandSender sender, Command command, String label,
+      String[] args) {
+    try {
+      if (args.length > 0) {
+        if (args[0].equalsIgnoreCase("reload") && p(sender, "auth.reload")
+            && canUseCommand(sender, CommandAccountPermission.NO_ACCOUNT))
+          extraauth.Reload();
+        else if (args[0].equalsIgnoreCase("disable")
+            && p(sender, "auth.disable", false)
+            && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
+          Disable(sender);
+        else if (args[0].equalsIgnoreCase("disableother")
+            && p(sender, "auth.disableother", false)
+            && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
+          DisableOther(sender, args);
+        else if (args[0].equalsIgnoreCase("help"))
+          Help(sender, label, args);
+        else if (args[0].equalsIgnoreCase("enable") && sender instanceof Player
+            && canUseCommand(sender, CommandAccountPermission.NO_ACCOUNT))
+          Enable(sender, label, args);
+        else if (args[0].equalsIgnoreCase("enableother")
+            && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
+          EnableOther(sender, label, args);
+        else if (sender instanceof Player
+            && canUseCommand(sender, CommandAccountPermission.NEED_ACCOUNT))
+          Auth(sender, args);
+        else
+          ShowHelp(sender, label, 1);
+      } else
+        ShowHelp(sender, label, 1);
+    } catch (final ArrayIndexOutOfBoundsException e) {
+      ShowHelp(sender, label, 1);
+    } catch (final Exception e) {
+      e.printStackTrace();
+      send(sender, extraauth.Lang._("Command.Exception"));
+    }
+
+    return true;
+  }
+
   private void Auth(CommandSender sender, String[] args) {
     final Player player = (Player) sender;
     final PreAuthenticateEvent event = new PreAuthenticateEvent(
@@ -330,47 +371,6 @@ public class AuthCommand implements CommandExecutor {
     else
       ShowHelp(sender, label, 1);
 
-  }
-
-  @Override
-  public boolean onCommand(CommandSender sender, Command command, String label,
-      String[] args) {
-    try {
-      if (args.length > 0) {
-        if (args[0].equalsIgnoreCase("reload") && p(sender, "auth.reload")
-            && canUseCommand(sender, CommandAccountPermission.NO_ACCOUNT))
-          extraauth.Reload();
-        else if (args[0].equalsIgnoreCase("disable")
-            && p(sender, "auth.disable", false)
-            && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
-          Disable(sender);
-        else if (args[0].equalsIgnoreCase("disableother")
-            && p(sender, "auth.disableother", false)
-            && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
-          DisableOther(sender, args);
-        else if (args[0].equalsIgnoreCase("help"))
-          Help(sender, label, args);
-        else if (args[0].equalsIgnoreCase("enable") && sender instanceof Player
-            && canUseCommand(sender, CommandAccountPermission.NO_ACCOUNT))
-          Enable(sender, label, args);
-        else if (args[0].equalsIgnoreCase("enableother")
-            && canUseCommand(sender, CommandAccountPermission.NEED_LOGGEDIN))
-          EnableOther(sender, label, args);
-        else if (sender instanceof Player
-            && canUseCommand(sender, CommandAccountPermission.NEED_ACCOUNT))
-          Auth(sender, args);
-        else
-          ShowHelp(sender, label, 1);
-      } else
-        ShowHelp(sender, label, 1);
-    } catch (final ArrayIndexOutOfBoundsException e) {
-      ShowHelp(sender, label, 1);
-    } catch (final Exception e) {
-      e.printStackTrace();
-      send(sender, extraauth.Lang._("Command.Exception"));
-    }
-
-    return true;
   }
 
   private boolean p(CommandSender sender, String permissions) {
